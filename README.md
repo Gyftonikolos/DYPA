@@ -36,6 +36,38 @@ npm start
 
 On the first run, the site may redirect to a challenge or verification page. If that happens, complete it manually in the opened browser window. The script will save the session to `storage-state.json` so later runs can reuse it.
 
+## Local Dashboard
+
+When the bot starts, it also starts a local dashboard at:
+
+- `http://127.0.0.1:3030`
+
+The dashboard shows:
+
+- current status
+- current lesson
+- today's minutes
+- lesson totals
+- last action
+- next planned exit
+- current URL
+- recent logs
+
+## Desktop App
+
+You can also run the Electron desktop shell:
+
+```powershell
+npm run desktop
+```
+
+It includes:
+
+- the same live dashboard information
+- an embedded browser pane for the login/training/course pages
+
+The current desktop shell reads the same local runtime state files as the automation bot. The embedded browser is inside the app, while the existing automation logic still runs from the bot script.
+
 ## Helpful for capturing selectors
 
 ```powershell
@@ -51,6 +83,7 @@ Playwright's code generator opens a browser and helps record reliable selectors.
 - Environment variables: `.env`
 - Timer/progress state: `progress-state.json`
 - Session event log: `session-log.jsonl`
+- Runtime dashboard state: `runtime-state.json`
 
 ## What is already implemented
 
@@ -67,6 +100,7 @@ Playwright's code generator opens a browser and helps record reliable selectors.
 - Saves both the current local state and an append-only local event log
 - Tracks per-lesson local totals using the official chapter requirements: `29h` for `E1`, `30h` for `E2-E5`
 - You can override test timings in `progress-state.json` with `scormSessionMinutes` and `dailyScormLimitMinutes`
+- Starts a local dashboard page with live runtime status and recent logs
 
 ## Next step
 

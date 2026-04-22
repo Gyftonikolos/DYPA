@@ -6,3 +6,4 @@ test-results/
 progress-state.json
 session-log.jsonl
 storage-state.json
+runtime-state.json

@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DYPA Desktop</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <h1>DYPA Desktop</h1>
+        <p>Live runtime dashboard with embedded browser</p>
+      </div>
+
+      <section class="panel hero">
+        <div class="panel-label">Status</div>
+        <div id="statusBadge" class="status idle">IDLE</div>
+        <div id="lastAction" class="hero-action">Idle</div>
+        <div id="lastUpdatedAt" class="hero-meta"></div>
+        <div class="control-row">
+          <button id="startBotBtn" class="control-btn primary">Start Automation</button>
+          <button id="stopBotBtn" class="control-btn">Stop Automation</button>
+          <button id="refreshBtn" class="control-btn">Refresh</button>
+        </div>
+        <div class="muted small-note">This currently launches the existing external Playwright automation process.</div>
+      </section>
+
+      <section class="panel stats-grid">
+        <div>
+          <div class="panel-label">Current Lesson</div>
+          <div id="currentLesson" class="metric">-</div>
+          <div id="currentLessonTitle" class="muted"></div>
+        </div>
+        <div>
+          <div class="panel-label">Today's Minutes</div>
+          <div id="todayMinutes" class="metric">0</div>
+          <div id="dailyLimit" class="muted"></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-label">Next Planned Exit</div>
+        <div id="nextExit" class="metric small">-</div>
+        <div id="countdown" class="muted"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-label">Runtime</div>
+        <div class="runtime-list">
+          <div><strong>Bot URL:</strong> <span id="botUrl" class="mono muted">-</span></div>
+          <div><strong>Embedded URL:</strong> <span id="embeddedUrl" class="mono muted">-</span></div>
+          <div><strong>Paused:</strong> <span id="pausedText">false</span></div>
+          <div><strong>Process Running:</strong> <span id="processRunningText">false</span></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div class="panel-label">Lesson Totals</div>
+        </div>
+        <div id="lessonTotals" class="lesson-list"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div class="panel-label">Recent Logs</div>
+        </div>
+        <div id="logs" class="logs"></div>
+      </section>
+    </aside>
+
+    <main class="workspace">
+      <header class="browser-toolbar">
+        <button class="nav-btn" data-target="login">Login</button>
+        <button class="nav-btn" data-target="training">Training</button>
+        <button class="nav-btn" data-target="course">Course</button>
+        <button class="nav-btn" id="reloadBtn">Reload</button>
+        <div class="address-wrap">
+          <span class="address-label">Embedded Browser</span>
+          <div id="addressBar" class="address mono">-</div>
+        </div>
+      </header>
+      <section class="browser-stage">
+        <webview id="embeddedBrowser" partition="persist:dypa-session" allowpopups></webview>
+      </section>
+    </main>
+  </div>
+  <script src="./renderer.js"></script>
+</body>
+</html>

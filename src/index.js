@@ -1,6 +1,7 @@
 const { chromium } = require("playwright");
 const fs = require("fs");
 const config = require("./config");
+const { startDashboardServer } = require("./dashboardServer");
 const {
   loadProgressState,
   saveProgressState,
@@ -12,6 +13,12 @@ const {
   ensureLessonProgress,
   addCompletedLessonMinutes
 } = require("./progressStore");
+const {
+  initRuntimeState,
+  updateRuntimeState,
+  setLessonTotals,
+  setLastAction
+} = require("./runtimeState");
 
 const ELEARNING_URL_PATTERNS = [
   /https:\/\/elearning\.golearn\.gr\/local\/mdl_autologin\/autologin\.php/i,
@@ -50,6 +57,7 @@ async function login(page) {
     event: "login_form_detected",
     url: page.url()
   });
+  setLastAction("Login form detected", { currentUrl: page.url() });
 
   await usernameInput.fill("");
   await usernameInput.fill(config.credentials.username);
@@ -94,6 +102,12 @@ async function ensureAuthenticated(page) {
         attempt,
         url: page.url()
       });
+      updateRuntimeState({
+        status: "running",
+        paused: false,
+        currentUrl: page.url()
+      });
+      setLastAction(`Login attempt ${attempt} started`);
 
       try {
         await login(page);
@@ -117,6 +131,7 @@ async function ensureAuthenticated(page) {
         attempt,
         url: page.url()
       });
+      setLastAction("Manual verification required", { currentUrl: page.url() });
 
       try {
         await waitForPortalLinks(page, 5 * 60_000);
@@ -142,6 +157,12 @@ async function ensureAuthenticated(page) {
         url: page.url(),
         attempt
       });
+      updateRuntimeState({
+        status: "running",
+        paused: false,
+        currentUrl: page.url()
+      });
+      setLastAction("Authenticated successfully");
       console.log(`Authenticated session saved to ${config.storageStatePath}.`);
       return;
     } catch (error) {
@@ -166,6 +187,7 @@ async function syncLessonStatsFromPanel(page, progressState) {
       event: "async_stats_panel_missing",
       url: page.url()
     });
+    setLastAction("Async stats panel missing", { currentUrl: page.url() });
     console.log("Async stats panel not found on the page. Continuing with local totals.");
     return;
   }
@@ -225,6 +247,8 @@ async function syncLessonStatsFromPanel(page, progressState) {
   }
 
   saveProgressState(progressState);
+  setLessonTotals(progressState.lessonProgress);
+  setLastAction(`Synced ${syncedCount} lesson totals from portal`, { currentUrl: page.url() });
   console.log(`Synced ${syncedCount} lesson totals from asyncStatsPanel.`);
 }
 
@@ -254,6 +278,8 @@ async function openCoursePage(page) {
   }
 
   await page.waitForLoadState("domcontentloaded");
+  updateRuntimeState({ currentUrl: page.url() });
+  setLastAction("Training page opened", { currentUrl: page.url() });
   console.log("Training page opened successfully.");
 
   const openCoursesButtonSelector =
@@ -267,6 +293,7 @@ async function openCoursePage(page) {
     event: "open_courses_button_click_attempt",
     url: page.url()
   });
+  setLastAction("Opening courses", { currentUrl: page.url() });
   openCoursesButton = page.locator(openCoursesButtonSelector).first();
   await openCoursesButton.click({ force: true });
   const popup = await popupPromise;
@@ -282,6 +309,8 @@ async function openCoursePage(page) {
     event: "courses_page_opened",
     url: targetPage.url()
   });
+  updateRuntimeState({ currentUrl: targetPage.url() });
+  setLastAction("Courses page opened", { currentUrl: targetPage.url() });
   console.log(`Courses page opened: ${targetPage.url()}`);
 
   const goToCourseLink = targetPage.locator(`a[href="${COURSE_URL}"]`).first();
@@ -310,6 +339,8 @@ async function openCoursePage(page) {
     event: "course_opened",
     url: targetPage.url()
   });
+  updateRuntimeState({ currentUrl: targetPage.url() });
+  setLastAction("Course opened", { currentUrl: targetPage.url() });
   console.log(`Course page opened: ${targetPage.url()}`);
 
   return targetPage;
@@ -347,11 +378,20 @@ async function resolveTargetSection(page, progressState) {
     throw new Error("None of the expected lesson sections (3-7) were found on the course page.");
   }
 
-  const targetIndex = resolveSectionIndex(progressState, lessonSections.length);
-  const targetSection = lessonSections[targetIndex];
+  let targetSection =
+    lessonSections.find((section) => {
+      const lessonProgress = progressState.lessonProgress?.[section.id];
+      const completedMinutes = lessonProgress?.completedMinutes || 0;
+      return completedMinutes < section.targetHours * 60;
+    }) || null;
+
+  if (!targetSection) {
+    const fallbackIndex = resolveSectionIndex(progressState, lessonSections.length);
+    targetSection = lessonSections[fallbackIndex];
+  }
 
   if (!targetSection || !targetSection.id || !targetSection.activityHref) {
-    throw new Error(`Could not resolve the target section at index ${targetIndex}.`);
+    throw new Error("Could not resolve a valid target lesson section.");
   }
 
   return targetSection;
@@ -371,6 +411,8 @@ async function passScormRedirect(page) {
     event: "scorm_redirect_passed",
     url: page.url()
   });
+  updateRuntimeState({ currentUrl: page.url() });
+  setLastAction("SCORM redirect passed", { currentUrl: page.url() });
   console.log(`Passed SCORM redirect page: ${page.url()}`);
 }
 
@@ -405,6 +447,7 @@ async function waitForPlayerReady(page, targetSection) {
         sectionId: targetSection.id,
         url: page.url()
       });
+      setLastAction("Player controls ready", { currentUrl: page.url() });
       return;
     }
 
@@ -446,6 +489,7 @@ async function mutePresentation(page, targetSection) {
     sectionId: targetSection.id,
     url: page.url()
   });
+  setLastAction("Presentation muted", { currentUrl: page.url() });
   console.log("Presentation muted.");
 }
 
@@ -467,6 +511,7 @@ async function startPresentationPlayback(page, targetSection) {
     sectionId: targetSection.id,
     url: page.url()
   });
+  setLastAction("Presentation started", { currentUrl: page.url() });
   console.log("Presentation playback started.");
 }
 
@@ -488,6 +533,7 @@ async function advancePresentation(page, targetSection) {
     sectionId: targetSection.id,
     url: page.url()
   });
+  setLastAction("Moved to next slide", { currentUrl: page.url() });
   return true;
 }
 
@@ -511,6 +557,16 @@ async function startScormAttempt(page, targetSection, progressState) {
     targetHours: targetSection.targetHours,
     completedMinutesForSection: lessonProgress.completedMinutes
   });
+  updateRuntimeState({
+    currentLesson: targetSection.id,
+    currentLessonTitle: targetSection.title,
+    currentUrl: page.url()
+  });
+  setLessonTotals(progressState.lessonProgress);
+  setLastAction(`Section ${targetSection.id} selected`, {
+    currentLesson: targetSection.id,
+    currentLessonTitle: targetSection.title
+  });
 
   console.log(`Selected section ${targetSection.id}: ${targetSection.title}`);
 
@@ -528,6 +584,8 @@ async function startScormAttempt(page, targetSection, progressState) {
     sectionId: targetSection.id,
     url: page.url()
   });
+  updateRuntimeState({ currentUrl: page.url() });
+  setLastAction("SCORM opened", { currentUrl: page.url() });
   console.log(`Opened section activity: ${page.url()}`);
 
   await passScormRedirect(page);
@@ -542,11 +600,16 @@ async function startScormAttempt(page, targetSection, progressState) {
     sectionId: targetSection.id,
     startedAt: progressState.lastScormStartedAt
   });
+  setLastAction("SCORM session started");
 }
 
 async function exitScormAttempt(page, targetSection, progressState, sessionMinutes) {
   const safeSessionMs = Math.max(1, sessionMinutes) * 60 * 1000;
   console.log(`Waiting ${sessionMinutes} minutes before exiting the SCORM activity.`);
+  updateRuntimeState({
+    nextPlannedExitAt: new Date(Date.now() + safeSessionMs).toISOString()
+  });
+  setLastAction(`Waiting ${sessionMinutes} minutes before exit`);
   const endAt = Date.now() + safeSessionMs;
 
   while (Date.now() < endAt) {
@@ -590,6 +653,13 @@ async function exitScormAttempt(page, targetSection, progressState, sessionMinut
     targetHours: targetSection.targetHours,
     url: page.url()
   });
+  setLessonTotals(progressState.lessonProgress);
+  updateRuntimeState({
+    currentUrl: page.url(),
+    nextPlannedExitAt: null,
+    todayMinutes: completedMinutesToday
+  });
+  setLastAction("SCORM session completed", { currentUrl: page.url() });
   console.log(`Exited activity safely: ${page.url()}`);
   console.log(`Completed ${completedMinutesToday}/${config.dailyScormLimitMinutes} minutes for today.`);
   console.log(
@@ -617,11 +687,24 @@ async function runDailyScormLoop(page, targetSection, progressState) {
         completedMinutesToday: dailyProgress.completedMinutes,
         dailyLimitMinutes: dailyLimitOverride
       });
+      updateRuntimeState({
+        status: "idle",
+        paused: false,
+        nextPlannedExitAt: null,
+        todayMinutes: dailyProgress.completedMinutes,
+        dailyLimitMinutes: dailyLimitOverride
+      });
+      setLastAction("Daily limit reached");
       console.log("Daily SCORM limit reached. Stopping for today.");
       return;
     }
 
     const sessionMinutes = Math.min(sessionMinutesOverride, remainingMinutes);
+    updateRuntimeState({
+      currentLesson: targetSection.id,
+      currentLessonTitle: targetSection.title,
+      nextPlannedExitAt: new Date(Date.now() + sessionMinutes * 60 * 1000).toISOString()
+    });
     await startScormAttempt(page, targetSection, progressState);
     await exitScormAttempt(page, targetSection, progressState, sessionMinutes);
   }
@@ -630,25 +713,55 @@ async function runDailyScormLoop(page, targetSection, progressState) {
 async function runWorkflow(page) {
   const progressState = ensureProgressStarted(loadProgressState(config.progressStatePath));
   ensureDailyProgress(progressState);
+  setLessonTotals(progressState.lessonProgress);
+  updateRuntimeState({
+    status: "running",
+    paused: false,
+    currentUrl: page.url(),
+    todayMinutes: progressState.dailyProgress.completedMinutes,
+    dailyLimitMinutes:
+      Number.isFinite(Number(progressState.dailyScormLimitMinutes)) && Number(progressState.dailyScormLimitMinutes) > 0
+        ? Number(progressState.dailyScormLimitMinutes)
+        : config.dailyScormLimitMinutes
+  });
   appendSessionLog(config.sessionLogPath, {
     event: "workflow_started",
     baseSectionIndex: progressState.baseSectionIndex
   });
+  setLastAction("Workflow started");
 
   await syncLessonStatsFromPanel(page, progressState);
 
   const coursePage = await openCoursePage(page);
   const targetSection = await resolveTargetSection(coursePage, progressState);
   ensureLessonProgress(progressState, targetSection.id, targetSection.targetHours);
+  setLessonTotals(progressState.lessonProgress);
   appendSessionLog(config.sessionLogPath, {
     event: "lesson_target_synced",
     sectionId: targetSection.id,
     targetHours: targetSection.targetHours
   });
+  setLastAction("Lesson target synced");
   await runDailyScormLoop(coursePage, targetSection, progressState);
 }
 
 async function main() {
+  initRuntimeState(config.runtimeStatePath);
+  startDashboardServer({
+    port: config.dashboardPort,
+    runtimeStatePath: config.runtimeStatePath,
+    progressStatePath: config.progressStatePath,
+    sessionLogPath: config.sessionLogPath
+  });
+  updateRuntimeState({
+    status: "idle",
+    paused: false,
+    dailyLimitMinutes: config.dailyScormLimitMinutes,
+    nextPlannedExitAt: null
+  });
+  setLastAction(`Dashboard started at http://127.0.0.1:${config.dashboardPort}`);
+  console.log(`Dashboard available at http://127.0.0.1:${config.dashboardPort}`);
+
   const browser = await chromium.launch({
     headless: config.headless,
     slowMo: config.slowMo
@@ -667,11 +780,24 @@ async function main() {
     await ensureAuthenticated(page);
     await runWorkflow(page);
   } finally {
+    updateRuntimeState({
+      status: "idle",
+      paused: false,
+      nextPlannedExitAt: null,
+      currentUrl: page.url()
+    });
+    setLastAction("Browser closed");
     await browser.close();
   }
 }
 
 main().catch((error) => {
+  updateRuntimeState({
+    status: "error",
+    paused: false,
+    nextPlannedExitAt: null
+  });
+  setLastAction(`Error: ${error.message}`);
   appendSessionLog(config.sessionLogPath, {
     event: "workflow_failed",
     message: error.message
