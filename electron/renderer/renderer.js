@@ -34,6 +34,11 @@ function fmtMinutes(minutes) {
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
 
+function getLessonDisplay(sectionId) {
+  const lesson = LESSON_SECTION_CONFIG.find((entry) => entry.id === String(sectionId));
+  return lesson ? `${lesson.lessonKey} • Section ${sectionId}` : `Section ${sectionId}`;
+}
+
 function getWebview() {
   return document.getElementById("embeddedBrowser");
 }
@@ -157,6 +162,9 @@ function renderState(state) {
   statusBadge.textContent = status.toUpperCase();
 
   document.getElementById("currentLesson").textContent = state.currentLesson || "-";
+  if (state.currentLesson) {
+    document.getElementById("currentLesson").textContent = getLessonDisplay(state.currentLesson);
+  }
   document.getElementById("currentLessonTitle").textContent = state.currentLessonTitle || "";
   document.getElementById("todayMinutes").textContent = state.todayMinutes ?? 0;
   document.getElementById("dailyLimit").textContent = `of ${state.dailyLimitMinutes ?? 0} planned`;
@@ -190,7 +198,7 @@ function renderState(state) {
     card.className = "lesson-card";
     card.innerHTML = `
       <div class="top">
-        <strong>Section ${sectionId}</strong>
+        <strong>${getLessonDisplay(sectionId)}</strong>
         <span class="muted">${lesson.targetHours || 0}h target</span>
       </div>
       <div class="muted">${completedMinutes} / ${targetMinutes} min</div>
@@ -237,8 +245,12 @@ function syncEmbeddedUrl() {
   const addressBar = document.getElementById("addressBar");
   const embeddedUrl = document.getElementById("embeddedUrl");
   const currentUrl = getSafeWebviewUrl();
-  addressBar.textContent = currentUrl;
-  embeddedUrl.textContent = currentUrl;
+  if (addressBar) {
+    addressBar.textContent = currentUrl;
+  }
+  if (embeddedUrl) {
+    embeddedUrl.textContent = currentUrl;
+  }
 }
 
 async function loadUrl(url) {
@@ -895,9 +907,14 @@ function setupEmbeddedBrowser() {
       return;
     }
 
-    document.getElementById("addressBar").textContent =
-      `Load failed: ${event.validatedURL || event.errorDescription}`;
-    document.getElementById("embeddedUrl").textContent = event.validatedURL || "-";
+    const addressBar = document.getElementById("addressBar");
+    const embeddedUrl = document.getElementById("embeddedUrl");
+    if (addressBar) {
+      addressBar.textContent = `Load failed: ${event.validatedURL || event.errorDescription}`;
+    }
+    if (embeddedUrl) {
+      embeddedUrl.textContent = event.validatedURL || "-";
+    }
     appendLog("webview_did_fail_load", {
       message: event.errorDescription,
       url: event.validatedURL || getSafeWebviewUrl()
@@ -921,31 +938,6 @@ function setupEmbeddedBrowser() {
   webview.addEventListener("destroyed", () => {
     appendLog("webview_destroyed", { url: getSafeWebviewUrl() }).catch(() => {});
     markFailed("Embedded browser was destroyed.");
-  });
-
-  document.querySelectorAll("[data-target]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const key = `${button.dataset.target}Url`;
-      if (appConfig[key]) {
-        loadUrl(appConfig[key]).catch((error) => {
-          recordRendererError("renderer_navigation_error", error).catch(() => {});
-        });
-      }
-    });
-  });
-
-  document.getElementById("reloadBtn").addEventListener("click", () => {
-    if (!embeddedAutomation.webviewReady) {
-      webview.setAttribute("src", getSafeWebviewUrl());
-      syncEmbeddedUrl();
-      return;
-    }
-
-    try {
-      webview.reload();
-    } catch (error) {
-      recordRendererError("renderer_reload_error", error).catch(() => {});
-    }
   });
 
   embeddedAutomation.webviewReady = false;
