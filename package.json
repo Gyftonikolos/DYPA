@@ -1,0 +1,23 @@
+{
+  "name": "dypa-golearn-automation",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Portable Playwright automation starter for edu.golearn.gr workflows.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "codegen": "playwright codegen https://edu.golearn.gr/training/trainee/training",
+    "test-run": "playwright test"
+  },
+  "keywords": [
+    "playwright",
+    "automation",
+    "portable"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.6.1",
+    "playwright": "^1.54.2"
+  }
+}

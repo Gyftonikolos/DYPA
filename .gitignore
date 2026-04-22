@@ -1,0 +1,8 @@
+node_modules/
+.env
+.vscode/
+playwright-report/
+test-results/
+progress-state.json
+session-log.jsonl
+storage-state.json

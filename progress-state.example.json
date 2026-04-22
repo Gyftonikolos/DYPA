@@ -1,0 +1,41 @@
+{
+  "startedAt": "2026-04-22T18:00:00.000Z",
+  "baseSectionIndex": 0,
+  "lessonDurationMinutes": 60,
+  "scormSessionMinutes": 2,
+  "dailyScormLimitMinutes": 6,
+  "lastResolvedSectionId": null,
+  "lastScormStartedAt": null,
+  "lastScormExitedAt": null,
+  "lessonProgress": {
+    "3": {
+      "targetHours": 29,
+      "completedMinutes": 0,
+      "updatedAt": null
+    },
+    "4": {
+      "targetHours": 30,
+      "completedMinutes": 0,
+      "updatedAt": null
+    },
+    "5": {
+      "targetHours": 30,
+      "completedMinutes": 0,
+      "updatedAt": null
+    },
+    "6": {
+      "targetHours": 30,
+      "completedMinutes": 0,
+      "updatedAt": null
+    },
+    "7": {
+      "targetHours": 30,
+      "completedMinutes": 0,
+      "updatedAt": null
+    }
+  },
+  "dailyProgress": {
+    "date": "2026-04-22",
+    "completedMinutes": 0
+  }
+}
