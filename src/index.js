@@ -39,6 +39,49 @@ const LESSON_SECTION_CONFIG = [
   { id: "7", targetHours: 30, lessonKey: "E5" }
 ];
 
+function isPageAlive(page) {
+  try {
+    return Boolean(
+      page &&
+        !page.isClosed() &&
+        page.context() &&
+        page.context().browser() &&
+        page.context().browser().isConnected()
+    );
+  } catch {
+    return false;
+  }
+}
+
+function getSafePageUrl(page) {
+  try {
+    return isPageAlive(page) ? page.url() : null;
+  } catch {
+    return null;
+  }
+}
+
+function isClosedTargetError(error) {
+  return /Target page, context or browser has been closed/i.test(error?.message || "");
+}
+
+async function waitOnLivePage(page, timeoutMs) {
+  if (!isPageAlive(page)) {
+    return false;
+  }
+
+  try {
+    await page.waitForTimeout(timeoutMs);
+    return true;
+  } catch (error) {
+    if (isClosedTargetError(error)) {
+      return false;
+    }
+
+    throw error;
+  }
+}
+
 async function login(page) {
   if (!config.credentials.username || !config.credentials.password) {
     throw new Error("GOLEARN_USERNAME and GOLEARN_PASSWORD must be set in .env.");
@@ -438,6 +481,15 @@ async function waitForPlayerReady(page, targetSection) {
   const timeoutAt = Date.now() + config.timeoutMs;
 
   while (Date.now() < timeoutAt) {
+    if (!isPageAlive(page)) {
+      appendSessionLog(config.sessionLogPath, {
+        event: "player_controls_aborted_page_closed",
+        sectionId: targetSection.id,
+        url: getSafePageUrl(page)
+      });
+      return;
+    }
+
     const playTarget = await getFrameWithSelector(page, PLAYER_PLAY_SELECTOR);
     const muteTarget = await getFrameWithSelector(page, PLAYER_MUTE_SELECTOR);
 
@@ -451,7 +503,15 @@ async function waitForPlayerReady(page, targetSection) {
       return;
     }
 
-    await page.waitForTimeout(1_000);
+    const pageStillAlive = await waitOnLivePage(page, 1_000);
+    if (!pageStillAlive) {
+      appendSessionLog(config.sessionLogPath, {
+        event: "player_controls_wait_interrupted",
+        sectionId: targetSection.id,
+        url: getSafePageUrl(page)
+      });
+      return;
+    }
   }
 
   appendSessionLog(config.sessionLogPath, {
@@ -462,6 +522,10 @@ async function waitForPlayerReady(page, targetSection) {
 }
 
 async function mutePresentation(page, targetSection) {
+  if (!isPageAlive(page)) {
+    return;
+  }
+
   const muteTarget = await getFrameWithSelector(page, PLAYER_MUTE_SELECTOR);
   if (!muteTarget) {
     appendSessionLog(config.sessionLogPath, {
@@ -494,6 +558,10 @@ async function mutePresentation(page, targetSection) {
 }
 
 async function startPresentationPlayback(page, targetSection) {
+  if (!isPageAlive(page)) {
+    return;
+  }
+
   const playTarget = await getFrameWithSelector(page, PLAYER_PLAY_SELECTOR);
   if (!playTarget) {
     appendSessionLog(config.sessionLogPath, {
@@ -516,6 +584,10 @@ async function startPresentationPlayback(page, targetSection) {
 }
 
 async function advancePresentation(page, targetSection) {
+  if (!isPageAlive(page)) {
+    return false;
+  }
+
   const nextTarget = await getFrameWithSelector(page, PLAYER_NEXT_SELECTOR);
   if (!nextTarget) {
     appendSessionLog(config.sessionLogPath, {
@@ -613,13 +685,65 @@ async function exitScormAttempt(page, targetSection, progressState, sessionMinut
   const endAt = Date.now() + safeSessionMs;
 
   while (Date.now() < endAt) {
+    if (!isPageAlive(page)) {
+      appendSessionLog(config.sessionLogPath, {
+        event: "scorm_session_interrupted",
+        sectionId: targetSection.id,
+        reason: "page_closed_during_wait",
+        url: getSafePageUrl(page)
+      });
+      updateRuntimeState({
+        status: "idle",
+        paused: false,
+        nextPlannedExitAt: null,
+        currentUrl: getSafePageUrl(page)
+      });
+      setLastAction("SCORM session interrupted");
+      console.log("SCORM session was interrupted because the page or browser closed.");
+      return false;
+    }
+
     const remainingMs = endAt - Date.now();
     const chunkMs = Math.min(15_000, remainingMs);
-    await page.waitForTimeout(chunkMs);
+    const pageStillAlive = await waitOnLivePage(page, chunkMs);
+    if (!pageStillAlive) {
+      appendSessionLog(config.sessionLogPath, {
+        event: "scorm_session_interrupted",
+        sectionId: targetSection.id,
+        reason: "page_closed_during_wait",
+        url: getSafePageUrl(page)
+      });
+      updateRuntimeState({
+        status: "idle",
+        paused: false,
+        nextPlannedExitAt: null,
+        currentUrl: getSafePageUrl(page)
+      });
+      setLastAction("SCORM session interrupted");
+      console.log("SCORM session was interrupted because the page or browser closed.");
+      return false;
+    }
 
     if (Date.now() < endAt) {
       await advancePresentation(page, targetSection).catch(() => false);
     }
+  }
+
+  if (!isPageAlive(page)) {
+    appendSessionLog(config.sessionLogPath, {
+      event: "scorm_session_interrupted",
+      sectionId: targetSection.id,
+      reason: "page_closed_before_exit",
+      url: getSafePageUrl(page)
+    });
+    updateRuntimeState({
+      status: "idle",
+      paused: false,
+      nextPlannedExitAt: null,
+      currentUrl: getSafePageUrl(page)
+    });
+    setLastAction("SCORM session interrupted");
+    return false;
   }
 
   const exitActivityLink = page.locator('a[title="Έξοδος από τη δραστηριότητα"]').first();
@@ -665,6 +789,7 @@ async function exitScormAttempt(page, targetSection, progressState, sessionMinut
   console.log(
     `Section ${targetSection.id} local total: ${lessonProgress.completedMinutes}/${targetSection.targetHours * 60} minutes.`
   );
+  return true;
 }
 
 async function runDailyScormLoop(page, targetSection, progressState) {
@@ -706,7 +831,10 @@ async function runDailyScormLoop(page, targetSection, progressState) {
       nextPlannedExitAt: new Date(Date.now() + sessionMinutes * 60 * 1000).toISOString()
     });
     await startScormAttempt(page, targetSection, progressState);
-    await exitScormAttempt(page, targetSection, progressState, sessionMinutes);
+    const completedAttempt = await exitScormAttempt(page, targetSection, progressState, sessionMinutes);
+    if (!completedAttempt) {
+      return;
+    }
   }
 }
 
@@ -784,10 +912,12 @@ async function main() {
       status: "idle",
       paused: false,
       nextPlannedExitAt: null,
-      currentUrl: page.url()
+      currentUrl: getSafePageUrl(page)
     });
     setLastAction("Browser closed");
-    await browser.close();
+    if (browser.isConnected()) {
+      await browser.close();
+    }
   }
 }
 

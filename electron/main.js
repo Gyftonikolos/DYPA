@@ -67,8 +67,27 @@ function getDashboardPayload() {
         : progressState.lessonProgress || {},
     currentLesson:
       runtimeState.currentLesson || progressState.lastResolvedSectionId || null,
-    processRunning: Boolean(botProcess)
+    processRunning: Boolean(runtimeState.processRunning ?? botProcess)
   };
+}
+
+function writeJsonFile(filePath, payload) {
+  const absolutePath = path.isAbsolute(filePath)
+    ? filePath
+    : path.resolve(process.cwd(), filePath);
+
+  fs.writeFileSync(absolutePath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
+}
+
+function updateRuntimeState(patch) {
+  const current = readJsonFile(config.runtimeStatePath, {});
+  const next = {
+    ...current,
+    ...patch,
+    lastUpdatedAt: new Date().toISOString()
+  };
+  writeJsonFile(config.runtimeStatePath, next);
+  return next;
 }
 
 function appendJsonLine(filePath, payload) {
@@ -160,15 +179,36 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  updateRuntimeState({
+    status: "idle",
+    paused: false,
+    processRunning: false,
+    nextPlannedExitAt: null
+  });
+
   ipcMain.handle("dashboard:get-state", async () => getDashboardPayload());
   ipcMain.handle("dashboard:get-logs", async () => readRecentLogs(config.sessionLogPath));
   ipcMain.handle("dashboard:get-app-config", async () => ({
     loginUrl: "https://edu.golearn.gr/login?returnUrl=%2f",
     trainingUrl: config.baseUrl,
-    courseUrl: "https://elearning.golearn.gr/course/view.php?id=7378"
+    courseUrl: "https://elearning.golearn.gr/course/view.php?id=7378",
+    timeoutMs: config.timeoutMs,
+    maxScormSessionMinutes: config.maxScormSessionMinutes,
+    dailyScormLimitMinutes: config.dailyScormLimitMinutes,
+    credentials: config.credentials
   }));
   ipcMain.handle("bot:start", async () => startBotProcess());
   ipcMain.handle("bot:stop", async () => stopBotProcess());
+  ipcMain.handle("dashboard:update-state", async (_event, patch) => updateRuntimeState(patch || {}));
+  ipcMain.handle("dashboard:append-log", async (_event, payload) => {
+    appendJsonLine(config.sessionLogPath, payload || {});
+    return { ok: true };
+  });
+  ipcMain.handle("progress:get-state", async () => readJsonFile(config.progressStatePath, {}));
+  ipcMain.handle("progress:save-state", async (_event, payload) => {
+    writeJsonFile(config.progressStatePath, payload || {});
+    return { ok: true };
+  });
 
   createWindow();
 
@@ -184,6 +224,12 @@ app.on("window-all-closed", () => {
     botProcess.kill();
     botProcess = null;
   }
+  updateRuntimeState({
+    status: "idle",
+    paused: false,
+    processRunning: false,
+    nextPlannedExitAt: null
+  });
   if (process.platform !== "darwin") {
     app.quit();
   }
