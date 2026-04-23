@@ -157,6 +157,10 @@ function getLessonDisplay(sectionId) {
   return lesson ? `${lesson.lessonKey} • Section ${sectionId}` : `Section ${sectionId}`;
 }
 
+function getLessonConfig(sectionId) {
+  return LESSON_SECTION_CONFIG.find((entry) => entry.id === String(sectionId)) || null;
+}
+
 function getWebview() {
   return document.getElementById("embeddedBrowser");
 }
@@ -293,6 +297,7 @@ function renderState(state) {
 
   document.getElementById("startBotBtn").disabled = Boolean(state.processRunning);
   document.getElementById("stopBotBtn").disabled = !state.processRunning;
+  document.getElementById("syncStatsBtn").disabled = Boolean(state.processRunning);
 
   const countdownEl = document.getElementById("countdown");
   if (state.nextPlannedExitAt) {
@@ -554,6 +559,44 @@ async function fillLoginForm() {
   `);
 }
 
+async function ensureTrainingPageLoaded() {
+  await loadUrl(appConfig.trainingUrl);
+
+  const landedOnLogin = await waitForCondition(
+    async () => {
+      const currentUrl = getSafeWebviewUrl() || "";
+      const loginVisible = await executeInWebview(`
+        (() => Boolean(document.querySelector("#Input_Username") && document.querySelector("#Input_Password")))()
+      `).catch(() => false);
+      return /\/login/i.test(currentUrl) || loginVisible ? true : currentUrl;
+    },
+    {
+      timeoutMs: appConfig.timeoutMs,
+      intervalMs: 500,
+      errorMessage: "Training page did not finish loading."
+    }
+  );
+
+  if (landedOnLogin === true) {
+    await appendLog("manual_sync_login_required", { url: getSafeWebviewUrl() || null });
+    await fillLoginForm();
+    await waitForCondition(
+      async () => {
+        const currentUrl = getSafeWebviewUrl() || "";
+        return !/\/login/i.test(currentUrl) ? currentUrl : null;
+      },
+      {
+        timeoutMs: appConfig.timeoutMs,
+        intervalMs: 500,
+        errorMessage: "Login did not complete while syncing website stats."
+      }
+    );
+    await loadUrl(appConfig.trainingUrl);
+  }
+
+  await waitForUrlMatch(/\/training\/trainee\/training/i);
+}
+
 async function findTargetSection(progressState) {
   const sections = await executeInWebview(`
     (() => Array.from(document.querySelectorAll("li.section.main")).map((element) => {
@@ -582,6 +625,112 @@ async function findTargetSection(progressState) {
       return completedMinutes < section.targetHours * 60;
     }) || lessonSections[0]
   );
+}
+
+async function readWebsiteStatsPanel() {
+  return executeInWebview(`
+    (() => {
+      const panel = document.querySelector("#asyncStatsPanel");
+      if (!panel) return null;
+
+      return Array.from(panel.querySelectorAll(".rz-card")).map((card) => {
+        const codeText = card.querySelector(".fw-bold span.text-muted")?.textContent?.trim() || "";
+        const progressSpans = Array.from(
+          card.querySelectorAll('.progress-info span[style*="font-size"]')
+        ).map((span) => span.textContent.trim());
+        const progressBar = card.querySelector('[role="progressbar"]');
+        const titleText = card.querySelector(".fw-bold")?.textContent?.replace(/\\s+/g, " ").trim() || "";
+        const completedHours = Number(String(progressSpans[0] || "0").replace(",", "."));
+        const targetHours = Number(String(progressSpans[1] || "0").replace(",", "."));
+        const percent = Number(progressBar?.getAttribute("aria-valuenow") || "0");
+
+        return {
+          code: codeText,
+          title: titleText,
+          completedHours: Number.isFinite(completedHours) ? completedHours : 0,
+          targetHours: Number.isFinite(targetHours) ? targetHours : 0,
+          percent: Number.isFinite(percent) ? percent : 0
+        };
+      });
+    })()
+  `);
+}
+
+async function syncWebsiteStatsToProgress(progressState) {
+  const rows = await waitForCondition(
+    async () => readWebsiteStatsPanel(),
+    {
+      timeoutMs: 15000,
+      intervalMs: 750,
+      errorMessage: "Async stats panel was not found."
+    }
+  ).catch(() => null);
+
+  if (!rows) {
+    await appendLog("website_stats_panel_missing", { url: getSafeWebviewUrl() || null });
+    await updateRuntimeState({}, "Website stats panel not found");
+    return {
+      synced: 0,
+      missing: true
+    };
+  }
+
+  let synced = 0;
+  const changes = [];
+
+  for (const row of rows) {
+    const match = /^100-(\d+)-/.exec(row.code || "");
+    if (!match) {
+      continue;
+    }
+
+    const sectionId = match[1];
+    const lessonConfig = getLessonConfig(sectionId);
+    if (!lessonConfig || row.targetHours <= 0) {
+      continue;
+    }
+
+    const completedMinutes = Math.round(row.completedHours * 60);
+    const targetHours = row.targetHours || lessonConfig.targetHours;
+    const existing = progressState.lessonProgress[sectionId] || {
+      targetHours,
+      completedMinutes: 0,
+      updatedAt: null
+    };
+    const previousCompletedMinutes = Number(existing.completedMinutes) || 0;
+
+    progressState.lessonProgress[sectionId] = {
+      targetHours,
+      completedMinutes: Math.max(previousCompletedMinutes, completedMinutes),
+      updatedAt: new Date().toISOString()
+    };
+
+    synced += 1;
+    changes.push({
+      sectionId,
+      code: row.code,
+      completedMinutes: progressState.lessonProgress[sectionId].completedMinutes,
+      targetMinutes: targetHours * 60,
+      serverCompletedMinutes: completedMinutes,
+      previousCompletedMinutes
+    });
+  }
+
+  await window.desktopApi.saveProgressState(progressState);
+  await appendLog("website_stats_synced", {
+    synced,
+    changes,
+    url: getSafeWebviewUrl() || null
+  });
+  await updateRuntimeState({
+    lessonTotals: progressState.lessonProgress
+  }, synced > 0 ? `Synced ${synced} website stats` : "No website stats matched lessons");
+  await refreshDashboard();
+
+  return {
+    synced,
+    missing: false
+  };
 }
 
 async function syncProgressState(progressState, targetSection, sessionMinutes) {
@@ -723,11 +872,12 @@ async function advanceSlidesUntil(endAt) {
   return "completed";
 }
 
-async function openTrainingAndCourse() {
-  await loadUrl(appConfig.trainingUrl);
-  await waitForUrlMatch(/\/training\/trainee\/training/i);
+async function openTrainingAndCourse(progressState) {
+  await ensureTrainingPageLoaded();
   await appendLog("training_page_opened", { url: getSafeWebviewUrl() });
   await updateRuntimeState({ currentUrl: getSafeWebviewUrl() }, "Training page opened");
+
+  await syncWebsiteStatsToProgress(progressState);
 
   await waitForCondition(
     async () =>
@@ -837,7 +987,7 @@ async function runEmbeddedAutomation() {
         return;
       }
 
-      await openTrainingAndCourse();
+      await openTrainingAndCourse(progressState);
       const targetSection = await findTargetSection(progressState);
       progressState.lastResolvedSectionId = targetSection.id;
       await window.desktopApi.saveProgressState(progressState);
@@ -1019,6 +1169,56 @@ async function handleStartBot() {
   }
 }
 
+async function handleSyncStats() {
+  if (embeddedAutomation.running) {
+    return;
+  }
+
+  try {
+    await waitForWebviewReady();
+    let progressState = ensureProgressShape(await window.desktopApi.getProgressState());
+    await window.desktopApi.saveProgressState(progressState);
+    embeddedAutomation.running = true;
+    embeddedAutomation.stopRequested = false;
+    await updateRuntimeState({
+      status: "running",
+      paused: false,
+      processRunning: true,
+      lessonTotals: progressState.lessonProgress,
+      todayMinutes: progressState.dailyProgress.completedMinutes,
+      dailyProgressDate: progressState.dailyProgress.date,
+      currentSessionStartedAt: null,
+      currentSessionMinutes: null
+    }, "Syncing website stats");
+
+    await ensureTrainingPageLoaded();
+    await appendLog("manual_website_stats_sync_started", { url: getSafeWebviewUrl() || null });
+    progressState = ensureProgressShape(await window.desktopApi.getProgressState());
+    await syncWebsiteStatsToProgress(progressState);
+  } catch (error) {
+    await appendLog("manual_website_stats_sync_failed", {
+      message: error.message,
+      url: getSafeWebviewUrl() || null
+    });
+    await updateRuntimeState({
+      status: "error",
+      paused: false,
+      processRunning: false,
+      currentUrl: getSafeWebviewUrl() || null
+    }, `Website stats sync failed: ${error.message}`);
+  } finally {
+    embeddedAutomation.running = false;
+    embeddedAutomation.stopRequested = false;
+    await updateRuntimeState({
+      status: "idle",
+      paused: false,
+      processRunning: false,
+      currentUrl: getSafeWebviewUrl() || null
+    }, "Website stats sync finished");
+    await refreshDashboard();
+  }
+}
+
 async function handleStopBot() {
   embeddedAutomation.stopRequested = true;
   await appendLog("embedded_automation_stop_requested", {
@@ -1136,6 +1336,7 @@ async function boot() {
   appConfig = await window.desktopApi.getAppConfig();
   document.getElementById("startBotBtn").addEventListener("click", handleStartBot);
   document.getElementById("stopBotBtn").addEventListener("click", handleStopBot);
+  document.getElementById("syncStatsBtn").addEventListener("click", handleSyncStats);
   document.getElementById("refreshBtn").addEventListener("click", refreshDashboard);
   setupEmbeddedBrowser();
   await refreshDashboard();
