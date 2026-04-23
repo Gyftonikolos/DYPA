@@ -49,6 +49,30 @@
         <div id="countdown" class="muted"></div>
       </section>
 
+      <section class="panel daily-timer-panel">
+        <div class="panel-header">
+          <div class="panel-label">Daily Timer</div>
+          <div id="dailyTimerChip" class="timer-chip">0m left</div>
+        </div>
+        <div class="daily-timer-grid">
+          <div class="daily-timer-card">
+            <div class="muted">Used Today</div>
+            <div id="dailyUsed" class="timer-metric">0m</div>
+          </div>
+          <div class="daily-timer-card">
+            <div class="muted">Remaining</div>
+            <div id="dailyRemaining" class="timer-metric">0m</div>
+          </div>
+          <div class="daily-timer-card">
+            <div class="muted">Current Session</div>
+            <div id="sessionElapsed" class="timer-metric">0m</div>
+          </div>
+        </div>
+        <div class="bar timer-bar">
+          <span id="dailyProgressBar" style="width:0%"></span>
+        </div>
+      </section>
+
       <section class="panel">
         <div class="panel-label">Runtime</div>
         <div class="runtime-list">

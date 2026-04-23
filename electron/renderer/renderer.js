@@ -19,6 +19,7 @@ const embeddedAutomation = {
 };
 
 const WEBVIEW_READY_TIMEOUT_MS = 60000;
+const ATHENS_TIMEZONE = "Europe/Athens";
 
 function fmtDate(value) {
   if (!value) return "-";
@@ -32,6 +33,123 @@ function fmtMinutes(minutes) {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function getAthensParts(date = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: ATHENS_TIMEZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23"
+  }).formatToParts(date);
+
+  return Object.fromEntries(
+    parts
+      .filter((part) => part.type !== "literal")
+      .map((part) => [part.type, Number(part.value)])
+  );
+}
+
+function getAthensOffsetMs(date = new Date()) {
+  const parts = getAthensParts(date);
+  const utcLikeAthens = Date.UTC(
+    parts.year,
+    parts.month - 1,
+    parts.day,
+    parts.hour,
+    parts.minute,
+    parts.second,
+    0
+  );
+  return utcLikeAthens - date.getTime();
+}
+
+function getAthensDayStartMs(date = new Date()) {
+  const parts = getAthensParts(date);
+  return Date.UTC(parts.year, parts.month - 1, parts.day, 0, 0, 0, 0) - getAthensOffsetMs(date);
+}
+
+function getCurrentAthensDayElapsedMinutes(startedAt, endedAt = new Date()) {
+  const startMs = new Date(startedAt).getTime();
+  const endMs = new Date(endedAt).getTime();
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) {
+    return 0;
+  }
+
+  const dayStartMs = getAthensDayStartMs(new Date(endMs));
+  const overlapStartMs = Math.max(startMs, dayStartMs);
+  const overlapMs = Math.max(0, endMs - overlapStartMs);
+  return Math.floor(overlapMs / 60000);
+}
+
+function getCurrentAthensDayContributionMinutes(startedAt, endedAt, plannedMinutes) {
+  const currentDayElapsedMinutes = getCurrentAthensDayElapsedMinutes(startedAt, endedAt);
+  const fullElapsedMinutes = (() => {
+    const startMs = new Date(startedAt).getTime();
+    const endMs = new Date(endedAt).getTime();
+    if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) {
+      return 0;
+    }
+    return Math.max(0, Math.round((endMs - startMs) / 60000));
+  })();
+
+  if (!Number.isFinite(plannedMinutes) || plannedMinutes <= 0) {
+    return currentDayElapsedMinutes;
+  }
+
+  if (fullElapsedMinutes <= 0) {
+    return 0;
+  }
+
+  return clamp(
+    Math.round((plannedMinutes * currentDayElapsedMinutes) / fullElapsedMinutes),
+    0,
+    plannedMinutes
+  );
+}
+
+function getDailyMetrics(state) {
+  const currentDayKey = getAthensDayKey();
+  const baseTodayMinutes = state.dailyProgressDate === currentDayKey ? Number(state.todayMinutes) || 0 : 0;
+  const dailyLimitMinutes = Number(state.dailyLimitMinutes) || 0;
+  const sessionStartedAt = state.currentSessionStartedAt ? new Date(state.currentSessionStartedAt).getTime() : null;
+  const hasLiveSession = Boolean(
+    state.processRunning &&
+    state.currentSessionStartedAt &&
+    Number.isFinite(sessionStartedAt)
+  );
+  const sessionElapsedMinutes = hasLiveSession
+    ? clamp(
+        getCurrentAthensDayElapsedMinutes(state.currentSessionStartedAt, new Date()),
+        0,
+        Number(state.currentSessionMinutes) || Number.MAX_SAFE_INTEGER
+      )
+    : 0;
+  const liveTodayMinutes = dailyLimitMinutes > 0
+    ? Math.min(dailyLimitMinutes, baseTodayMinutes + sessionElapsedMinutes)
+    : baseTodayMinutes + sessionElapsedMinutes;
+  const remainingMinutes = dailyLimitMinutes > 0
+    ? Math.max(0, dailyLimitMinutes - liveTodayMinutes)
+    : 0;
+  const percent = dailyLimitMinutes > 0
+    ? clamp((liveTodayMinutes / dailyLimitMinutes) * 100, 0, 100)
+    : 0;
+
+  return {
+    liveTodayMinutes,
+    remainingMinutes,
+    sessionElapsedMinutes,
+    dailyLimitMinutes,
+    percent
+  };
 }
 
 function getLessonDisplay(sectionId) {
@@ -50,12 +168,8 @@ function delay(ms) {
 }
 
 function getAthensDayKey() {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Europe/Athens",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit"
-  }).format(new Date());
+  const parts = getAthensParts(new Date());
+  return `${parts.year}-${String(parts.month).padStart(2, "0")}-${String(parts.day).padStart(2, "0")}`;
 }
 
 async function waitForWebviewReady(timeoutMs = WEBVIEW_READY_TIMEOUT_MS) {
@@ -166,8 +280,10 @@ function renderState(state) {
     document.getElementById("currentLesson").textContent = getLessonDisplay(state.currentLesson);
   }
   document.getElementById("currentLessonTitle").textContent = state.currentLessonTitle || "";
-  document.getElementById("todayMinutes").textContent = state.todayMinutes ?? 0;
-  document.getElementById("dailyLimit").textContent = `of ${state.dailyLimitMinutes ?? 0} planned`;
+  const dailyMetrics = getDailyMetrics(state);
+
+  document.getElementById("todayMinutes").textContent = dailyMetrics.liveTodayMinutes;
+  document.getElementById("dailyLimit").textContent = `of ${dailyMetrics.dailyLimitMinutes ?? 0} planned`;
   document.getElementById("lastAction").textContent = state.lastAction || "-";
   document.getElementById("lastUpdatedAt").textContent = fmtDate(state.lastUpdatedAt);
   document.getElementById("botUrl").textContent = state.currentUrl || "-";
@@ -185,6 +301,14 @@ function renderState(state) {
   } else {
     countdownEl.textContent = "";
   }
+
+  document.getElementById("dailyUsed").textContent = fmtMinutes(dailyMetrics.liveTodayMinutes);
+  document.getElementById("dailyRemaining").textContent = fmtMinutes(dailyMetrics.remainingMinutes);
+  document.getElementById("sessionElapsed").textContent = fmtMinutes(dailyMetrics.sessionElapsedMinutes);
+  document.getElementById("dailyTimerChip").textContent = dailyMetrics.dailyLimitMinutes > 0
+    ? `${fmtMinutes(dailyMetrics.remainingMinutes)} left`
+    : "No daily cap";
+  document.getElementById("dailyProgressBar").style.width = `${dailyMetrics.percent}%`;
 
   const lessonTotalsRoot = document.getElementById("lessonTotals");
   lessonTotalsRoot.innerHTML = "";
@@ -461,19 +585,48 @@ async function findTargetSection(progressState) {
 }
 
 async function syncProgressState(progressState, targetSection, sessionMinutes) {
-  progressState.dailyProgress.completedMinutes += sessionMinutes;
-  progressState.lastScormExitedAt = new Date().toISOString();
+  const exitedAt = new Date().toISOString();
+  const currentDayKey = getAthensDayKey();
+  const todayContributionMinutes = getCurrentAthensDayContributionMinutes(
+    progressState.lastScormStartedAt,
+    exitedAt,
+    sessionMinutes
+  );
+
+  if (progressState.dailyProgress.date !== currentDayKey) {
+    progressState.dailyProgress = {
+      date: currentDayKey,
+      completedMinutes: 0
+    };
+  }
+
+  progressState.dailyProgress.completedMinutes += todayContributionMinutes;
+  progressState.lastScormExitedAt = exitedAt;
   progressState.lastResolvedSectionId = targetSection.id;
   progressState.lessonProgress[targetSection.id].completedMinutes += sessionMinutes;
   progressState.lessonProgress[targetSection.id].updatedAt = new Date().toISOString();
   await window.desktopApi.saveProgressState(progressState);
 
+  if (todayContributionMinutes !== sessionMinutes) {
+    await appendLog("session_split_across_days", {
+      sectionId: targetSection.id,
+      sessionMinutes,
+      minutesCountedToday: todayContributionMinutes,
+      minutesCountedPreviousDay: Math.max(0, sessionMinutes - todayContributionMinutes),
+      startedAt: progressState.lastScormStartedAt,
+      exitedAt
+    });
+  }
+
   await updateRuntimeState({
     lessonTotals: progressState.lessonProgress,
     todayMinutes: progressState.dailyProgress.completedMinutes,
+    dailyProgressDate: progressState.dailyProgress.date,
     currentLesson: targetSection.id,
     currentLessonTitle: targetSection.title,
-    nextPlannedExitAt: null
+    nextPlannedExitAt: null,
+    currentSessionStartedAt: null,
+    currentSessionMinutes: null
   }, "SCORM session completed");
 }
 
@@ -638,7 +791,10 @@ async function runEmbeddedAutomation() {
     processRunning: true,
     lessonTotals: progressState.lessonProgress,
     todayMinutes: progressState.dailyProgress.completedMinutes,
-    dailyLimitMinutes
+    dailyProgressDate: progressState.dailyProgress.date,
+    dailyLimitMinutes,
+    currentSessionStartedAt: null,
+    currentSessionMinutes: null
   }, "Embedded automation started");
   await appendLog("embedded_automation_started");
   await refreshDashboard();
@@ -664,7 +820,8 @@ async function runEmbeddedAutomation() {
     await updateRuntimeState({ currentUrl: getSafeWebviewUrl() }, "Authenticated in embedded browser");
 
     while (!embeddedAutomation.stopRequested) {
-      if (progressState.dailyProgress.completedMinutes >= dailyLimitMinutes) {
+      const remainingDailyMinutes = dailyLimitMinutes - progressState.dailyProgress.completedMinutes;
+      if (remainingDailyMinutes <= 0) {
         await appendLog("daily_limit_reached", {
           completedMinutesToday: progressState.dailyProgress.completedMinutes,
           dailyLimitMinutes
@@ -674,7 +831,8 @@ async function runEmbeddedAutomation() {
           paused: false,
           processRunning: false,
           nextPlannedExitAt: null,
-          todayMinutes: progressState.dailyProgress.completedMinutes
+          todayMinutes: progressState.dailyProgress.completedMinutes,
+          dailyProgressDate: progressState.dailyProgress.date
         }, "Daily limit reached");
         return;
       }
@@ -744,20 +902,33 @@ async function runEmbeddedAutomation() {
 
       await muteAndPlayPresentation();
 
+      const plannedSessionMinutes = Math.min(sessionMinutes, remainingDailyMinutes);
+      if (plannedSessionMinutes !== sessionMinutes) {
+        await appendLog("session_trimmed_for_daily_limit", {
+          requestedSessionMinutes: sessionMinutes,
+          plannedSessionMinutes,
+          remainingDailyMinutes,
+          url: getSafeWebviewUrl()
+        });
+      }
+
       progressState.lastScormStartedAt = new Date().toISOString();
       await window.desktopApi.saveProgressState(progressState);
-      const plannedExitAt = new Date(Date.now() + sessionMinutes * 60 * 1000).toISOString();
+      const plannedExitAt = new Date(Date.now() + plannedSessionMinutes * 60 * 1000).toISOString();
       await appendLog("scorm_session_started", {
         sectionId: targetSection.id,
         startedAt: progressState.lastScormStartedAt,
+        sessionMinutes: plannedSessionMinutes,
         url: getSafeWebviewUrl()
       });
       await updateRuntimeState({
         currentUrl: getSafeWebviewUrl(),
-        nextPlannedExitAt: plannedExitAt
-      }, `Waiting ${sessionMinutes} minutes before exit`);
+        nextPlannedExitAt: plannedExitAt,
+        currentSessionStartedAt: progressState.lastScormStartedAt,
+        currentSessionMinutes: plannedSessionMinutes
+      }, `Waiting ${plannedSessionMinutes} minutes before exit`);
 
-      const sessionOutcome = await advanceSlidesUntil(Date.now() + sessionMinutes * 60 * 1000);
+      const sessionOutcome = await advanceSlidesUntil(Date.now() + plannedSessionMinutes * 60 * 1000);
       if (sessionOutcome === "stopped") {
         await exitCurrentScormSafely(targetSection, "user_stop_requested");
         progressState.lastScormExitedAt = new Date().toISOString();
@@ -771,7 +942,9 @@ async function runEmbeddedAutomation() {
           paused: false,
           processRunning: false,
           nextPlannedExitAt: null,
-          currentUrl: getSafeWebviewUrl() || null
+          currentUrl: getSafeWebviewUrl() || null,
+          currentSessionStartedAt: null,
+          currentSessionMinutes: null
         }, "Stopped safely by user");
         return;
       }
@@ -779,10 +952,10 @@ async function runEmbeddedAutomation() {
       await clickSelector('a[title="Έξοδος από τη δραστηριότητα"]');
       await waitForUrlMatch(new RegExp(`/course/view\\.php\\?id=7378(?:#section-${targetSection.id})?$`));
 
-      await syncProgressState(progressState, targetSection, sessionMinutes);
+      await syncProgressState(progressState, targetSection, plannedSessionMinutes);
       await appendLog("scorm_session_completed", {
         sectionId: targetSection.id,
-        sessionMinutes,
+        sessionMinutes: plannedSessionMinutes,
         completedMinutesToday: progressState.dailyProgress.completedMinutes,
         completedMinutesForSection: progressState.lessonProgress[targetSection.id].completedMinutes,
         url: getSafeWebviewUrl()
@@ -797,7 +970,9 @@ async function runEmbeddedAutomation() {
       paused: false,
       processRunning: false,
       nextPlannedExitAt: null,
-      currentUrl: getSafeWebviewUrl() || null
+      currentUrl: getSafeWebviewUrl() || null,
+      currentSessionStartedAt: null,
+      currentSessionMinutes: null
     }, "Embedded automation stopped");
     await refreshDashboard();
   }
