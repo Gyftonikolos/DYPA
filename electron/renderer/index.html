@@ -7,113 +7,357 @@
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
-  <div class="shell">
-    <aside class="sidebar">
-      <div class="brand">
-        <div class="brand-kicker">Automation Console</div>
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="title-wrap">
+        <div class="title-kicker">Automation Console</div>
         <h1>DYPA Desktop</h1>
-        <p>Embedded lesson automation with live progress, safe exits, and a full in-app browser.</p>
       </div>
+      <div class="header-actions">
+        <div id="statusBadge" class="status idle">IDLE</div>
+        <div id="scheduledRunBadge" class="status-badge-muted">No scheduled run</div>
+        <button id="refreshBtn" class="control-btn">Refresh</button>
+      </div>
+    </header>
 
-      <section class="panel hero">
-        <div class="hero-topline">
-          <div class="panel-label">Status</div>
-          <div id="statusBadge" class="status idle">IDLE</div>
-        </div>
-        <div id="lastAction" class="hero-action">Idle</div>
-        <div id="lastUpdatedAt" class="hero-meta"></div>
-        <div class="control-row">
-          <button id="startBotBtn" class="control-btn primary">Start Embedded Automation</button>
-          <button id="stopBotBtn" class="control-btn">Stop Embedded Automation</button>
-          <button id="syncStatsBtn" class="control-btn">Sync Website Stats</button>
-          <button id="refreshBtn" class="control-btn">Refresh</button>
-        </div>
-        <div class="muted small-note">Automation now runs against the embedded browser in this desktop app.</div>
-      </section>
+    <div class="main-layout">
+      <aside class="left-nav">
+        <button class="nav-btn nav-active" data-tab="dashboard">Dashboard</button>
+        <button class="nav-btn" data-tab="automation">Automation</button>
+        <button class="nav-btn" data-tab="settings">Settings</button>
+        <button class="nav-btn dev-only" data-tab="logs">Logs</button>
+        <button class="nav-btn dev-only" data-tab="onboarding">Onboarding</button>
+      </aside>
 
-      <section class="panel stats-grid">
-        <div class="stat-tile">
-          <div class="panel-label">Current Lesson</div>
-          <div id="currentLesson" class="metric">-</div>
-          <div id="currentLessonTitle" class="muted"></div>
-        </div>
-        <div class="stat-tile">
-          <div class="panel-label">Today's Minutes</div>
-          <div id="todayMinutes" class="metric">0</div>
-          <div id="dailyLimit" class="muted"></div>
-        </div>
-      </section>
+      <main class="content-area">
+        <section id="view-dashboard" class="view active">
+          <section class="panel">
+            <div class="panel-header">
+              <div class="panel-label">Quick Actions</div>
+              <div id="lastSuccessfulUiAction" class="muted">Last action: -</div>
+            </div>
+            <div class="control-row">
+              <button id="quickStartBtn" class="control-btn primary" type="button">Start Automation</button>
+              <button id="quickStopBtn" class="control-btn danger" type="button">Stop Automation</button>
+              <button id="quickSyncBtn" class="control-btn dev-only" type="button">Sync Website Stats</button>
+              <button id="quickExportBundleBtn" class="control-btn dev-only" type="button">Export Support Bundle</button>
+            </div>
+            <div id="quickStopHint" class="muted small-hint">Nothing is currently running.</div>
+          </section>
 
-      <section class="panel next-exit-panel">
-        <div class="panel-label">Next Planned Exit</div>
-        <div id="nextExit" class="metric small">-</div>
-        <div id="countdown" class="muted"></div>
-      </section>
+          <section class="panel dev-only">
+            <div class="panel-header">
+              <div class="panel-label">Runtime Status</div>
+              <div class="muted" id="diagCurrentStep">-</div>
+            </div>
+            <div class="runtime-list">
+              <div><strong>Session Status:</strong> <span id="diagSchedulerStatus" class="muted">idle</span></div>
+              <div><strong>Next Run:</strong> <span id="diagScheduledFor" class="muted">-</span></div>
+              <div><strong>Time Left:</strong> <span id="diagScheduleCountdown" class="muted">-</span></div>
+              <div><strong>Last Update:</strong> <span id="diagHeartbeatAt" class="muted">-</span></div>
+            </div>
+            <details class="advanced-settings diag-advanced-toggle">
+              <summary>Show technical details</summary>
+              <div class="advanced-settings-inner runtime-list">
+                <div><strong>Last Successful Step:</strong> <span id="diagLastSuccessfulStep" class="muted">-</span></div>
+                <div><strong>Retry Count:</strong> <span id="diagRetryCount" class="muted">0</span></div>
+                <div><strong>Last Selector Failure:</strong> <span id="diagLastSelectorFailure" class="muted">-</span></div>
+                <div><strong>Last Recovery:</strong> <span id="diagLastRecoveryAction" class="muted">-</span></div>
+                <div><strong>Recovery Attempts:</strong> <span id="diagRecoveryAttempts" class="muted">0</span></div>
+                <div><strong>Last Checkpoint:</strong> <span id="diagLastStableCheckpoint" class="muted">-</span></div>
+              </div>
+            </details>
+          </section>
 
-      <section class="panel daily-timer-panel">
-        <div class="panel-header">
-          <div class="panel-label">Daily Timer</div>
-          <div id="dailyTimerChip" class="timer-chip">0m left</div>
-        </div>
-        <div class="daily-timer-grid">
-          <div class="daily-timer-card">
-            <div class="muted">Used Today</div>
-            <div id="dailyUsed" class="timer-metric">0m</div>
+          <div class="stats-grid">
+            <article class="panel stat-tile">
+              <div class="panel-label">Current Lesson</div>
+              <div id="currentLesson" class="metric">-</div>
+              <div id="currentLessonTitle" class="muted"></div>
+              <div id="nextLessonHint" class="muted small-hint">Next lesson: -</div>
+            </article>
+            <article class="panel stat-tile">
+              <div class="panel-label">Today's Minutes</div>
+              <div id="todayMinutes" class="metric">0</div>
+              <div id="dailyLimit" class="muted">of 0 planned</div>
+            </article>
+            <article class="panel stat-tile">
+              <div class="panel-label">Next Planned Exit</div>
+              <div id="nextExit" class="metric small">-</div>
+              <div id="countdown" class="muted"></div>
+            </article>
+            <article class="panel stat-tile">
+              <div class="panel-label">Last Action</div>
+              <div id="lastAction" class="metric small">Idle</div>
+              <div id="lastUpdatedAt" class="muted"></div>
+            </article>
           </div>
-          <div class="daily-timer-card">
-            <div class="muted">Remaining</div>
-            <div id="dailyRemaining" class="timer-metric">0m</div>
-          </div>
-          <div class="daily-timer-card">
-            <div class="muted">Current Session</div>
-            <div id="sessionElapsed" class="timer-metric">0m</div>
-          </div>
-        </div>
-        <div class="bar timer-bar">
-          <span id="dailyProgressBar" style="width:0%"></span>
-        </div>
-      </section>
 
-      <section class="panel">
-        <div class="panel-label">Runtime</div>
-        <div class="runtime-list">
-          <div><strong>Bot URL:</strong> <span id="botUrl" class="mono muted">-</span></div>
-          <div><strong>Embedded URL:</strong> <span id="embeddedUrl" class="mono muted">-</span></div>
-          <div><strong>Paused:</strong> <span id="pausedText">false</span></div>
-          <div><strong>Process Running:</strong> <span id="processRunningText">false</span></div>
-        </div>
-      </section>
+          <section class="panel dev-only">
+            <div class="panel-label">Lesson Totals</div>
+            <div id="lessonTotals" class="lesson-list"></div>
+          </section>
 
-      <section class="panel">
-        <div class="panel-header">
-          <div class="panel-label">Lesson Totals</div>
-        </div>
-        <div id="lessonTotals" class="lesson-list"></div>
-      </section>
+          <section class="panel dev-only">
+            <div class="panel-label">Run Health</div>
+            <div id="runHealthCard" class="health-card muted">No diagnostics yet.</div>
+          </section>
 
-      <section class="panel">
-        <div class="panel-header">
-          <div class="panel-label">Recent Logs</div>
-        </div>
-        <div id="logs" class="logs"></div>
-      </section>
-    </aside>
+          <section class="panel dev-only">
+            <div class="panel-label">Analytics</div>
+            <div id="analyticsCards" class="analytics-grid"></div>
+          </section>
 
-    <main class="workspace">
-      <header class="browser-toolbar">
-        <div class="address-wrap full-width">
-          <div class="address-shell solo">
+          <section class="panel dev-only">
+            <div class="panel-header">
+              <div class="panel-label">UX Insights</div>
+              <div id="mostFrequentUiWarning" class="muted">Most frequent warning: -</div>
+            </div>
+            <div id="uxTelemetrySummary" class="muted">No local UX activity yet.</div>
+          </section>
+        </section>
+
+        <section id="view-automation" class="view">
+          <section class="panel">
+            <div class="panel-label">Session Controls</div>
+            <div class="control-row">
+              <button id="startBotBtn" class="control-btn primary">Start Study Session</button>
+              <button class="help-trigger" type="button" data-help-key="startAutomation" aria-label="Help: Start Study Session">?</button>
+              <button id="testLoginOnlyBtn" class="control-btn dev-only" type="button">Test Login Only</button>
+              <button id="syncStatsBtn" class="control-btn dev-only" type="button">Sync Website Stats</button>
+              <button id="stopBotBtn" class="control-btn danger">Stop Safely</button>
+              <button class="help-trigger" type="button" data-help-key="stopAutomation" aria-label="Help: Stop Safely">?</button>
+            </div>
+            <div id="stopActionHint" class="muted small-hint">Nothing is currently running.</div>
+            <div class="control-row dev-only">
+              <input id="scheduleTimeInput" class="field profile-name-field" type="time" value="17:40">
+              <button id="runAtTimeBtn" class="control-btn success" type="button">Run at this time</button>
+              <button id="cancelScheduledRunBtn" class="control-btn danger" type="button">Cancel Scheduled Run</button>
+            </div>
+            <div id="scheduleActionHint" class="muted small-hint dev-only schedule-hint-neutral">No scheduled run.</div>
+            <p class="muted">Use Start Study Session to run automatically. Use Stop Safely to pause without abrupt exits.</p>
+          </section>
+
+          <section class="panel">
+            <div class="panel-label">Runtime</div>
+            <div class="runtime-list">
+              <div><strong>Bot URL:</strong> <span id="botUrl" class="mono muted">-</span></div>
+              <div><strong>Embedded URL:</strong> <span id="embeddedUrl" class="mono muted">-</span></div>
+              <div><strong>Paused:</strong> <span id="pausedText">false</span></div>
+              <div><strong>Process Running:</strong> <span id="processRunningText">false</span></div>
+            </div>
+          </section>
+        </section>
+
+        <section id="view-settings" class="view">
+          <section class="panel">
+            <div class="panel-label">Credentials (Encrypted At Rest)</div>
+            <div class="form-grid">
+              <label>Username <button class="help-trigger inline-help" type="button" data-help-key="username" aria-label="Help: Username">?</button>
+                <input id="settingsUsername" type="text" class="field" autocomplete="username">
+              </label>
+              <label>Password <button class="help-trigger inline-help" type="button" data-help-key="password" aria-label="Help: Password">?</button>
+                <div class="password-row">
+                  <input id="settingsPassword" type="password" class="field" autocomplete="current-password">
+                  <button id="togglePasswordBtn" class="control-btn" type="button">Show</button>
+                </div>
+              </label>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-label">Runtime Configuration</div>
+            <div class="settings-card">
+              <div class="settings-card-title">Simple view</div>
+              <div class="form-grid">
+                <label class="checkbox-option"><input id="settingsSimpleMode" type="checkbox"> Simple Mode (hide technical details)</label>
+                <label class="checkbox-option"><input id="settingsLightTheme" type="checkbox"> White Theme</label>
+                <label class="checkbox-option"><input id="settingsDirectCourseMode" type="checkbox"> Direct Course Mode (skip button click first)</label>
+              </div>
+            </div>
+            <div class="settings-card">
+              <div class="settings-card-title">Choose your setup speed</div>
+              <div class="settings-card-subtitle muted">Use Recommended if you are not sure.</div>
+              <div class="preset-row">
+                <button id="presetSafeBtn" class="control-btn" type="button">Recommended (Safe)</button>
+                <button id="presetBalancedBtn" class="control-btn" type="button">Balanced</button>
+                <button id="presetFastBtn" class="control-btn" type="button">Fast</button>
+              </div>
+            </div>
+
+            <div class="settings-card">
+              <div class="settings-card-title">How long should each session run?</div>
+              <div class="form-grid two-col">
+                <label>Minimum Minutes <button class="help-trigger inline-help" type="button" data-help-key="sessionMinMinutes" aria-label="Help: Minimum Minutes">?</button> <span class="required-dot" title="Required">*</span> <span id="riskSessionMinMinutes" class="risk-badge risk-low">low</span><input id="settingsSessionMinMinutes" type="number" class="field" min="1" step="1" required></label>
+                <label>Maximum Minutes <button class="help-trigger inline-help" type="button" data-help-key="sessionMaxMinutes" aria-label="Help: Maximum Minutes">?</button> <span class="required-dot" title="Required">*</span> <span id="riskSessionMaxMinutes" class="risk-badge risk-low">low</span><input id="settingsSessionMaxMinutes" type="number" class="field" min="1" step="1" required></label>
+              </div>
+              <div class="muted range-hint">A random number between Min and Max is used each session.</div>
+              <div id="rangeValidationHint" class="muted small-hint"></div>
+              <div class="control-row">
+                <button id="autoSwapRangeBtn" class="control-btn" type="button">Fix Min/Max Automatically</button>
+              </div>
+            </div>
+
+            <div class="settings-card">
+              <div class="settings-card-title">Daily target and safety</div>
+              <div class="form-grid two-col">
+                <label>Daily Target Minutes <button class="help-trigger inline-help" type="button" data-help-key="dailyLimitMinutes" aria-label="Help: Daily Target Minutes">?</button> <span id="riskDailyLimit" class="risk-badge risk-low">low</span><input id="settingsDailyLimitMinutes" type="number" class="field"></label>
+                <label>Page Wait Time (ms) <button class="help-trigger inline-help" type="button" data-help-key="timeoutMs" aria-label="Help: Page Wait Time">?</button> <span id="riskTimeoutMs" class="risk-badge risk-low">low</span><input id="settingsTimeoutMs" type="number" class="field"></label>
+              </div>
+              <div id="settingsRiskSummary" class="settings-risk-summary risk-low">Looks good for everyday use.</div>
+            </div>
+
+            <details class="advanced-settings dev-only">
+              <summary>Advanced options (optional)</summary>
+              <div class="advanced-settings-inner">
+                <div class="panel-subrow">
+                  <span class="muted">Saved Profiles</span>
+                  <div class="preset-row">
+                    <input id="settingsProfileName" class="field profile-name-field" type="text" placeholder="Profile name">
+                    <button id="saveProfileBtn" class="control-btn" type="button">Save Profile</button>
+                    <select id="savedProfilesSelect" class="field profile-select-field"></select>
+                    <button id="applyProfileBtn" class="control-btn" type="button">Apply Profile</button>
+                  </div>
+                </div>
+                <div class="panel-subrow">
+                  <span class="muted">Scheduled Start (one-time)</span>
+                  <div class="preset-row">
+                    <input id="settingsDefaultRunAtTime" class="field profile-name-field" type="time" value="17:40">
+                    <div id="settingsNextScheduledRun" class="muted">Next scheduled run: none</div>
+                  </div>
+                </div>
+                <div class="form-grid two-col">
+                  <label>Dashboard Port <button class="help-trigger inline-help" type="button" data-help-key="dashboardPort" aria-label="Help: Dashboard Port">?</button> <span id="riskDashboardPort" class="risk-badge risk-low">low</span><input id="settingsDashboardPort" type="number" class="field"></label>
+                  <label>Background Mode <button class="help-trigger inline-help" type="button" data-help-key="headless" aria-label="Help: Background Mode">?</button>
+                    <select id="settingsHeadless" class="field">
+                      <option value="false">Visible browser (recommended)</option>
+                      <option value="true">Background (hidden)</option>
+                    </select>
+                  </label>
+                  <label>Action Delay (ms) <button class="help-trigger inline-help" type="button" data-help-key="slowMo" aria-label="Help: Action Delay">?</button> <span id="riskSlowMo" class="risk-badge risk-low">low</span><input id="settingsSlowMo" type="number" class="field"></label>
+                </div>
+              </div>
+            </details>
+
+            <div class="settings-action-guide muted">Steps: Check Settings -> Save -> Start Session.</div>
+            <div class="control-row">
+              <button id="testSettingsBtn" class="control-btn" type="button">Check My Settings</button>
+              <button class="help-trigger" type="button" data-help-key="validateSettings" aria-label="Help: Check My Settings">?</button>
+              <button id="previewSettingsBtn" class="control-btn" type="button">Show Change Details</button>
+              <button id="saveSettingsBtn" class="control-btn primary" type="button">Save Settings</button>
+              <button class="help-trigger" type="button" data-help-key="saveSettings" aria-label="Help: Save Settings">?</button>
+            </div>
+            <div id="settingsFeedback" class="muted"></div>
+            <div id="settingsSafetyWarning" class="muted settings-safety-warning"></div>
+            <div id="settingsPreview" class="settings-preview muted hidden-preview"></div>
+            <div id="validationAssistant" class="assistant-list"></div>
+          </section>
+
+          <section class="panel dev-only">
+            <div class="panel-label">Alerts</div>
+            <div class="form-grid">
+              <label class="checkbox-option"><input id="notifEnabled" type="checkbox"> Enable desktop alerts</label>
+              <label class="checkbox-option"><input id="notifStartStop" type="checkbox"> Start/Stop messages</label>
+              <label class="checkbox-option"><input id="notifErrors" type="checkbox"> Errors</label>
+              <label class="checkbox-option"><input id="notifLimits" type="checkbox"> Daily target reached</label>
+              <label class="checkbox-option"><input id="notifValidation" type="checkbox"> Settings warnings</label>
+              <label class="checkbox-option"><input id="verboseWebviewConsole" type="checkbox"> Detailed browser logs (debug)</label>
+            </div>
+          </section>
+        </section>
+
+        <section id="view-logs" class="view">
+          <section class="panel">
+            <div class="panel-header">
+              <div class="panel-label">Recent Logs</div>
+              <div class="chip-row">
+                <button class="chip-btn chip-active" data-log-group="all">all</button>
+                <button class="chip-btn" data-log-group="errors">errors</button>
+                <button class="chip-btn" data-log-group="auth">auth</button>
+                <button class="chip-btn" data-log-group="scorm">scorm</button>
+                <button class="chip-btn" data-log-group="settings">settings</button>
+                <button class="chip-btn" data-log-group="system">system</button>
+              </div>
+              <input id="logFilter" class="field" type="text" placeholder="Filter logs by event or message">
+              <select id="exportFormat" class="field export-field">
+                <option value="json">json</option>
+                <option value="jsonl">jsonl</option>
+              </select>
+              <label class="export-scope"><input id="exportFilteredOnly" type="checkbox"> filtered only</label>
+              <button id="exportLogsBtn" class="control-btn" type="button">Export Logs</button>
+              <button id="exportSupportBundleBtn" class="control-btn" type="button">Export Support Bundle</button>
+            </div>
+            <div id="logs" class="logs"></div>
+          </section>
+        </section>
+
+        <section id="view-onboarding" class="view">
+          <section class="panel">
+            <div class="panel-label">Getting Started Checklist</div>
+            <div id="onboardingChecklist" class="assistant-list"></div>
+            <div class="control-row">
+              <button id="dismissOnboardingBtn" class="control-btn" type="button">Dismiss Checklist</button>
+              <button id="resetOnboardingBtn" class="control-btn" type="button">Reset Checklist</button>
+            </div>
+          </section>
+          <section class="panel">
+            <div class="panel-label">What Changed Recently</div>
+            <div id="recentChangesList" class="muted"></div>
+          </section>
+        </section>
+      </main>
+
+      <section class="browser-pane">
+        <header class="browser-toolbar">
+          <div class="address-shell">
             <div id="addressBar" class="address mono">-</div>
           </div>
-        </div>
-      </header>
-      <section class="browser-stage">
+        </header>
         <div class="browser-frame">
           <webview id="embeddedBrowser" partition="persist:dypa-session" allowpopups></webview>
         </div>
       </section>
-    </main>
+    </div>
   </div>
+  <aside id="helpPanel" class="help-panel" aria-hidden="true">
+    <div class="help-panel-header">
+      <h2 id="helpPanelTitle">Field Help</h2>
+      <button id="closeHelpPanelBtn" class="control-btn" type="button" aria-label="Close help panel">Close</button>
+    </div>
+    <p id="helpPanelSummary" class="muted"></p>
+    <div class="help-block">
+      <h3>What this does</h3>
+      <p id="helpPanelWhat"></p>
+    </div>
+    <div class="help-block">
+      <h3>When to change it</h3>
+      <p id="helpPanelWhen"></p>
+    </div>
+    <div class="help-block">
+      <h3>Safe values</h3>
+      <p id="helpPanelSafe"></p>
+    </div>
+    <div class="help-block">
+      <h3>Example</h3>
+      <p id="helpPanelExample"></p>
+    </div>
+  </aside>
+  <div id="onboardingOverlay" class="onboarding-overlay" aria-hidden="true">
+    <div class="onboarding-card">
+      <h2>Welcome to DYPA Desktop</h2>
+      <p class="muted">Complete these 3 quick steps to run safely.</p>
+      <ol>
+        <li>Validate and save settings.</li>
+        <li>Run Test Login Only.</li>
+        <li>Start automation and monitor diagnostics.</li>
+      </ol>
+      <div class="control-row">
+        <button id="openOnboardingTabBtn" class="control-btn primary" type="button">Open Onboarding</button>
+        <button id="skipOnboardingOverlayBtn" class="control-btn" type="button">Skip</button>
+      </div>
+    </div>
+  </div>
+  <div id="helpTooltip" class="help-tooltip" role="tooltip" aria-hidden="true"></div>
   <script src="./renderer.js"></script>
 </body>
 </html>

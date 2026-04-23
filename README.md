@@ -1,23 +1,11 @@
-# GoLearn Automation Starter
+# DYPA GoLearn Automation
 
-This is a small Playwright starter project for automating workflows on:
+Simple desktop automation for `https://edu.golearn.gr` with an embedded browser, settings UI, scheduling, and local runtime tracking.
 
-- `https://edu.golearn.gr/training/trainee/training`
-
-It is designed to be easy to share with other people.
-
-## Why this setup
-
-- Works on Windows, macOS, and Linux
-- Handles modern websites better than simple browser macros
-- Keeps credentials in `.env` instead of hardcoding them
-- Gives us one clear place to add the real workflow
-
-## Setup
+## Quick Start
 
 1. Install Node.js 18+.
-2. Open this folder in a terminal.
-3. Run:
+2. In this folder run:
 
 ```powershell
 npm install
@@ -25,88 +13,62 @@ npx playwright install
 Copy-Item .env.example .env
 ```
 
-4. Edit `.env` and fill in credentials if needed.
-5. Run the script once to create `storage-state.json`.
-
-## Run
-
-```powershell
-npm start
-```
-
-On the first run, the site may redirect to a challenge or verification page. If that happens, complete it manually in the opened browser window. The script will save the session to `storage-state.json` so later runs can reuse it.
-
-## Local Dashboard
-
-When the bot starts, it also starts a local dashboard at:
-
-- `http://127.0.0.1:3030`
-
-The dashboard shows:
-
-- current status
-- current lesson
-- today's minutes
-- lesson totals
-- last action
-- next planned exit
-- current URL
-- recent logs
-
-## Desktop App
-
-You can also run the Electron desktop shell:
+3. Fill credentials in `.env` (or later in the app Settings).
+4. Start desktop app:
 
 ```powershell
 npm run desktop
 ```
 
-It includes:
+## Main Features
 
-- the same live dashboard information
-- an embedded browser pane for the login/training/course pages
+- Embedded browser automation flow (login -> training -> course -> SCORM loop)
+- Settings with encrypted credentials
+- Session range and daily target controls
+- One-time scheduler (`Run at this time` / `Cancel Scheduled Run`)
+- Cleaner action UX:
+  - scheduled button state (green + disabled when pending)
+  - cancel button state (red + enabled only when valid)
+  - consistent Start/Stop button enable/disable behavior
+- UI modes:
+  - `Simple Mode` (hides dev-heavy UI)
+  - `White Theme` (light mode)
+- Simplified runtime status panel with optional technical details
 
-The current desktop shell reads the same local runtime state files as the automation bot. The embedded browser is inside the app, while the existing automation logic still runs from the bot script.
+## Defaults
 
-## Helpful for capturing selectors
+Current defaults are:
+
+- Session Min Minutes: `38`
+- Session Max Minutes: `41`
+- Daily Target Minutes: `350`
+- Page Wait Time: `30000`
+
+## Settings Priority
+
+1. Saved desktop settings
+2. `.env`
+3. Built-in defaults
+
+## Test Commands
 
 ```powershell
-npm run codegen
+npm run test:unit
+npm run test:integration
+npm run test:e2e-ui
+npm run test:phase2
+npm run test:phase3
+npm run test:phase5
+npm run test:ux-smoke
+npm run quality:gate
 ```
 
-Playwright's code generator opens a browser and helps record reliable selectors.
+## Useful Paths
 
-## Where to customize
-
-- Main entry point: `src/index.js`
-- Site settings: `src/config.js`
-- Environment variables: `.env`
-- Timer/progress state: `progress-state.json`
-- Session event log: `session-log.jsonl`
-- Runtime dashboard state: `runtime-state.json`
-
-## What is already implemented
-
-- Opens the real GoLearn login page
-- Fills `Input.Username` and `Input.Password`
-- Submits the form and waits for the trainee portal to load
-- Saves the authenticated browser session to `storage-state.json`
-- Opens the `Κατάρτιση` section after login
-- Opens the target Moodle course
-- Selects the lesson section based on elapsed time from `progress-state.json`
-- Follows the fixed lesson sequence `section-3` through `section-7`
-- Enters the SCORM lesson in 40-minute sessions and exits safely before the cutoff
-- Reopens the same lesson until the tracked daily total reaches 6 hours
-- Saves both the current local state and an append-only local event log
-- Tracks per-lesson local totals using the official chapter requirements: `29h` for `E1`, `30h` for `E2-E5`
-- You can override test timings in `progress-state.json` with `scormSessionMinutes` and `dailyScormLimitMinutes`
-- Starts a local dashboard page with live runtime status and recent logs
-
-## Next step
-
-To finish the real automation, we still need the exact user flow, for example:
-
-- how login works
-- which buttons or menus should be clicked
-- whether files are uploaded or downloaded
-- what success looks like
+- Main automation script: `src/index.js`
+- Desktop main process: `electron/main.js`
+- Renderer UI logic: `electron/renderer/renderer.js`
+- Renderer styles: `electron/renderer/styles.css`
+- Runtime state: `runtime-state.json`
+- Progress state: `progress-state.json`
+- Session log: `session-log.jsonl`
