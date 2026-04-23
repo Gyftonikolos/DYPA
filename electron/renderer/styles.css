@@ -219,6 +219,10 @@ body {
 .control-btn.primary:disabled {
   filter: grayscale(0.15);
 }
+.control-btn.danger:disabled {
+  opacity: 0.5;
+  border-color: var(--risk-high-border);
+}
 .control-btn:hover, .nav-btn:hover { transform: translateY(-1px); border-color: var(--control-hover-border); }
 .control-btn:focus-visible, .nav-btn:focus-visible, .field:focus-visible, .help-trigger:focus-visible {
   outline: 2px solid #87a0ff;

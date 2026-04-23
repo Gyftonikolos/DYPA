@@ -702,10 +702,20 @@ function setButtonState(buttonId, options = {}) {
   const {
     disabled = false,
     label = null,
-    classes = null
+    classes = null,
+    title = null,
+    ariaLabel = null
   } = options;
   button.disabled = Boolean(disabled);
   button.setAttribute("aria-disabled", String(Boolean(disabled)));
+  if (typeof title === "string") {
+    button.title = title;
+  } else {
+    button.removeAttribute("title");
+  }
+  if (typeof ariaLabel === "string" && ariaLabel.trim()) {
+    button.setAttribute("aria-label", ariaLabel.trim());
+  }
   if (typeof label === "string" && label.length > 0) {
     button.textContent = label;
   }
@@ -726,6 +736,11 @@ function applyActionButtonStates(state, scheduledRun = {}) {
   const canCancelSchedule = hasScheduledRun;
   const canStartNow = !isAutomationRunning;
   const canStopNow = isAutomationRunning;
+  const stopDisabledReason = hasScheduledRun && !isAutomationRunning
+    ? "Stop is available only while a session is running. Use Cancel Scheduled Run."
+    : "Nothing is currently running.";
+  const stopLabel = "Stop Safely";
+  const quickStopLabel = "Stop Automation";
 
   setButtonState("startBotBtn", {
     disabled: !canStartNow,
@@ -739,13 +754,17 @@ function applyActionButtonStates(state, scheduledRun = {}) {
   });
   setButtonState("stopBotBtn", {
     disabled: !canStopNow,
-    label: "Stop Safely",
-    classes: ["danger"]
+    label: stopLabel,
+    classes: ["danger"],
+    title: canStopNow ? "Stop the active automation session safely." : stopDisabledReason,
+    ariaLabel: canStopNow ? stopLabel : `${stopLabel}. ${stopDisabledReason}`
   });
   setButtonState("quickStopBtn", {
     disabled: !canStopNow,
-    label: "Stop Automation",
-    classes: ["danger"]
+    label: quickStopLabel,
+    classes: ["danger"],
+    title: canStopNow ? "Stop the active automation session." : stopDisabledReason,
+    ariaLabel: canStopNow ? quickStopLabel : `${quickStopLabel}. ${stopDisabledReason}`
   });
 
   setButtonState("runAtTimeBtn", {
@@ -765,7 +784,7 @@ function applyActionButtonStates(state, scheduledRun = {}) {
     if (hasScheduledRun) {
       const runLabel = formatScheduledForHuman(scheduledRun.scheduledForIso);
       const timeLeftLabel = fmtCountdown(scheduledRun.scheduledForIso);
-      scheduleActionHint.textContent = `Scheduled for ${runLabel} (${timeLeftLabel}).`;
+      scheduleActionHint.textContent = `Scheduled for ${runLabel} (${timeLeftLabel}). Use Cancel Scheduled Run to remove it.`;
       scheduleActionHint.classList.add("schedule-hint-success");
     } else if (isAutomationRunning) {
       scheduleActionHint.textContent = "Scheduling is disabled while automation is running.";
@@ -774,6 +793,19 @@ function applyActionButtonStates(state, scheduledRun = {}) {
       scheduleActionHint.textContent = "No scheduled run.";
       scheduleActionHint.classList.add("schedule-hint-neutral");
     }
+  }
+
+  const stopActionHint = document.getElementById("stopActionHint");
+  if (stopActionHint) {
+    stopActionHint.classList.remove("schedule-hint-neutral", "schedule-hint-success");
+    stopActionHint.textContent = canStopNow ? "Automation is running. You can stop safely now." : stopDisabledReason;
+    stopActionHint.classList.add(canStopNow ? "schedule-hint-success" : "schedule-hint-neutral");
+  }
+  const quickStopHint = document.getElementById("quickStopHint");
+  if (quickStopHint) {
+    quickStopHint.classList.remove("schedule-hint-neutral", "schedule-hint-success");
+    quickStopHint.textContent = canStopNow ? "Automation is running. Stop is available." : stopDisabledReason;
+    quickStopHint.classList.add(canStopNow ? "schedule-hint-success" : "schedule-hint-neutral");
   }
 
   const syncStatsBtn = document.getElementById("syncStatsBtn");
