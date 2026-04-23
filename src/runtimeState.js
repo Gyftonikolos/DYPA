@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const { writeJsonFileAtomic } = require("./atomicJsonStore");
 
 let runtimeStatePath = path.resolve(process.cwd(), "runtime-state.json");
 
@@ -15,14 +16,66 @@ const defaultState = {
   todayMinutes: 0,
   dailyLimitMinutes: 0,
   lessonTotals: {},
-  dashboardStartedAt: null
+  dashboardStartedAt: null,
+  processRunning: false,
+  runtimeDiagnostics: {
+    currentStep: "-",
+    lastSuccessfulStep: "-",
+    retryCount: 0,
+    lastSelectorFailure: "-",
+    lastRecoveryAction: "-",
+    recoveryAttempts: 0,
+    lastStableCheckpoint: "-",
+    heartbeatAt: null
+  },
+  scheduledRun: {
+    enabled: false,
+    runAtLocalTime: null,
+    scheduledForIso: null,
+    createdAt: null,
+    status: "idle",
+    triggerToken: null,
+    consumedToken: null,
+    lastTriggeredAt: null
+  },
+  stateVersion: 0,
+  updatedAt: null
 };
 
 let state = { ...defaultState };
 
 function saveState() {
   state.lastUpdatedAt = new Date().toISOString();
-  fs.writeFileSync(runtimeStatePath, `${JSON.stringify(state, null, 2)}\n`, "utf8");
+  state.stateVersion = Number(state.stateVersion || 0) + 1;
+  state.updatedAt = new Date().toISOString();
+  writeJsonFileAtomic(runtimeStatePath, state);
+}
+
+const VALID_TRANSITIONS = {
+  idle: ["running"],
+  running: ["paused", "stopping", "error", "idle"],
+  paused: ["running", "stopping", "error", "idle"],
+  stopping: ["idle", "error"],
+  error: ["idle", "running"]
+};
+
+function transitionRuntimeState(nextStatus, patch = {}) {
+  const from = state.status || "idle";
+  const to = String(nextStatus || from);
+  const allowed = VALID_TRANSITIONS[from] || [];
+  if (to !== from && !allowed.includes(to)) {
+    state.lastAction = `Invalid state transition blocked: ${from} -> ${to}`;
+    saveState();
+    return { ...state, transitionRejected: true };
+  }
+  state = {
+    ...state,
+    ...patch,
+    status: to,
+    processRunning: to === "running" || to === "paused" || to === "stopping"
+  };
+  saveState();
+  return state;
 }
 
 function initRuntimeState(filePath) {
@@ -76,6 +129,28 @@ function setLastAction(lastAction, extra = {}) {
   return state;
 }
 
+function updateRuntimeDiagnostics(patch = {}) {
+  state.runtimeDiagnostics = {
+    ...(state.runtimeDiagnostics || {}),
+    ...patch
+  };
+  saveState();
+  return state;
+}
+
+function touchHeartbeat(step = null) {
+  const diagnostics = {
+    ...(state.runtimeDiagnostics || {}),
+    heartbeatAt: new Date().toISOString()
+  };
+  if (step) {
+    diagnostics.currentStep = step;
+  }
+  state.runtimeDiagnostics = diagnostics;
+  saveState();
+  return state;
+}
+
 function getRuntimeState() {
   return state;
 }
@@ -83,7 +158,10 @@ function getRuntimeState() {
 module.exports = {
   initRuntimeState,
   updateRuntimeState,
+  transitionRuntimeState,
   setLessonTotals,
   setLastAction,
+  updateRuntimeDiagnostics,
+  touchHeartbeat,
   getRuntimeState
 };

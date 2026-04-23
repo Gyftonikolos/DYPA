@@ -1,6 +1,11 @@
 const { chromium } = require("playwright");
 const fs = require("fs");
 const config = require("./config");
+const { resolveSessionRange, pickSessionMinutes } = require("./sessionPolicy");
+const { resolveLessonSelection } = require("./sharedOrchestrator");
+const { withRetry } = require("./retryPolicy");
+const { createRunSupervisor } = require("./runSupervisor");
+const { STEP, StepError } = require("./stepContracts");
 const { startDashboardServer } = require("./dashboardServer");
 const {
   loadProgressState,
@@ -9,15 +14,21 @@ const {
   resolveSectionIndex,
   ensureDailyProgress,
   addCompletedMinutes,
+  addCompletedMinutesSplitByCurrentAthensDay,
   appendSessionLog,
   ensureLessonProgress,
-  addCompletedLessonMinutes
+  addCompletedLessonMinutes,
+  validateAndClampProgressState,
+  applySessionMinutesIdempotent
 } = require("./progressStore");
 const {
   initRuntimeState,
   updateRuntimeState,
+  transitionRuntimeState,
   setLessonTotals,
-  setLastAction
+  setLastAction,
+  updateRuntimeDiagnostics,
+  touchHeartbeat
 } = require("./runtimeState");
 
 const ELEARNING_URL_PATTERNS = [
@@ -27,6 +38,7 @@ const ELEARNING_URL_PATTERNS = [
 ];
 const AUTH_ENTRY_URL = "https://edu.golearn.gr/login?returnUrl=%2f";
 const COURSE_URL = "https://elearning.golearn.gr/course/view.php?id=7378";
+const ELEARNING_AUTOLOGIN_URL = "https://elearning.golearn.gr/local/mdl_autologin/autologin.php";
 const COURSE_URL_PATTERN = /https:\/\/elearning\.golearn\.gr\/course\/view\.php\?id=7378/i;
 const PLAYER_PLAY_SELECTOR = "#play-pause";
 const PLAYER_NEXT_SELECTOR = "#next";
@@ -136,7 +148,20 @@ async function waitForPortalLinks(page, timeoutMs) {
 
 async function ensureAuthenticated(page) {
   for (let attempt = 1; attempt <= 3; attempt += 1) {
-    await page.goto(AUTH_ENTRY_URL, { waitUntil: "domcontentloaded" });
+    await withRetry(
+      () => page.goto(AUTH_ENTRY_URL, { waitUntil: "domcontentloaded" }),
+      {
+        retries: 2,
+        onRetry: ({ attempt: retryAttempt, delayMs, message }) =>
+          appendSessionLog(config.sessionLogPath, {
+            event: "retry_attempt",
+            phase: "auth_entry_navigation",
+            retryAttempt,
+            delayMs,
+            message
+          })
+      }
+    );
 
     const loginFormVisible = await page.locator("#Input_Username").isVisible().catch(() => false);
     if (page.url().includes("/login") || loginFormVisible) {
@@ -162,7 +187,17 @@ async function ensureAuthenticated(page) {
         });
       }
 
-      await page.goto(config.baseUrl, { waitUntil: "domcontentloaded" });
+      await withRetry(() => page.goto(config.baseUrl, { waitUntil: "domcontentloaded" }), {
+        retries: 2,
+        onRetry: ({ attempt: retryAttempt, delayMs, message }) =>
+          appendSessionLog(config.sessionLogPath, {
+            event: "retry_attempt",
+            phase: "base_navigation",
+            retryAttempt,
+            delayMs,
+            message
+          })
+      });
     }
 
     const onAuthWall = page.url().includes("/challenge") || page.url().includes("/login");
@@ -230,6 +265,12 @@ async function syncLessonStatsFromPanel(page, progressState) {
       event: "async_stats_panel_missing",
       url: page.url()
     });
+    appendSessionLog(config.sessionLogPath, {
+      event: "portal_drift_detected",
+      phase: "stats_panel",
+      missingSelectors: ["#asyncStatsPanel"],
+      url: page.url()
+    });
     setLastAction("Async stats panel missing", { currentUrl: page.url() });
     console.log("Async stats panel not found on the page. Continuing with local totals.");
     return;
@@ -273,10 +314,13 @@ async function syncLessonStatsFromPanel(page, progressState) {
     );
 
     currentLessonProgress.targetHours = targetHours || lessonConfig.targetHours;
-    currentLessonProgress.completedMinutes = Math.max(
-      currentLessonProgress.completedMinutes || 0,
-      liveCompletedMinutes
-    );
+    const targetMinutes = (targetHours || lessonConfig.targetHours) * 60;
+    const normalizedCompletedMinutes = Math.max(0, Math.min(targetMinutes, liveCompletedMinutes));
+    const existingCompletedMinutes = Number(currentLessonProgress.completedMinutes || 0);
+    currentLessonProgress.completedMinutes =
+      existingCompletedMinutes > targetMinutes
+        ? normalizedCompletedMinutes
+        : Math.max(existingCompletedMinutes, normalizedCompletedMinutes);
     currentLessonProgress.updatedAt = new Date().toISOString();
     syncedCount += 1;
 
@@ -290,6 +334,15 @@ async function syncLessonStatsFromPanel(page, progressState) {
   }
 
   saveProgressState(progressState);
+  const invariantWarnings = validateAndClampProgressState(progressState, {
+    dailyLimitMinutes: progressState.dailyScormLimitMinutes || config.dailyScormLimitMinutes
+  });
+  for (const warning of invariantWarnings) {
+    appendSessionLog(config.sessionLogPath, {
+      event: "progress_invariant_warning",
+      ...warning
+    });
+  }
   setLessonTotals(progressState.lessonProgress);
   setLastAction(`Synced ${syncedCount} lesson totals from portal`, { currentUrl: page.url() });
   console.log(`Synced ${syncedCount} lesson totals from asyncStatsPanel.`);
@@ -325,22 +378,157 @@ async function openCoursePage(page) {
   setLastAction("Training page opened", { currentUrl: page.url() });
   console.log("Training page opened successfully.");
 
-  const openCoursesButtonSelector =
-    'button:has(.fa-envelope-open-text), button:has(span.fa-envelope-open-text)';
-  let openCoursesButton = page.locator(openCoursesButtonSelector).first();
-  await openCoursesButton.waitFor({ state: "visible", timeout: config.timeoutMs });
+  const openCoursesSelectors = [
+    "button .fa-envelope-open-text",
+    "button span.fa-envelope-open-text",
+    "button i.fa-envelope-open-text",
+    'button[title*="Open"]',
+    'button[aria-label*="Open"]',
+    'button[title*="μάθη"]',
+    'button[aria-label*="μάθη"]',
+    'button[class*="course"]',
+    'button[class*="lesson"]',
+    '[role="button"][title*="Open"]',
+    '[role="button"][aria-label*="Open"]',
+    '[role="button"][title*="μάθη"]',
+    '[role="button"][aria-label*="μάθη"]'
+  ];
+  const openCoursesTextHints = [
+    "open courses",
+    "open course",
+    "open lessons",
+    "courses",
+    "lessons",
+    "mathim",
+    "άνοιγμα μαθημάτων",
+    "ανοιγμα μαθηματων",
+    "μαθήματα",
+    "μαθηματα"
+  ];
+
+  const openCoursesTarget = await page.evaluate(
+    ({ selectors, textHints }) => {
+      const normalize = (value) =>
+        String(value || "")
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .toLowerCase()
+          .trim();
+      const candidates = [];
+      const seen = new Set();
+      const pushCandidate = (button, strategy, score) => {
+        if (!button || seen.has(button)) {
+          return;
+        }
+        const style = window.getComputedStyle(button);
+        const rect = button.getBoundingClientRect();
+        const visible =
+          rect.width > 0 &&
+          rect.height > 0 &&
+          style.visibility !== "hidden" &&
+          style.display !== "none";
+        const disabled =
+          button.disabled ||
+          button.getAttribute("aria-disabled") === "true" ||
+          style.pointerEvents === "none";
+        if (!visible || disabled) {
+          return;
+        }
+        seen.add(button);
+        candidates.push({ button, strategy, score });
+      };
+
+      for (const selector of selectors) {
+        const node = document.querySelector(selector);
+        if (!node) {
+          continue;
+        }
+        const button = node.closest("button, [role='button']");
+        if (button) {
+          pushCandidate(button, selector, 70);
+        }
+      }
+
+      const buttonNodes = Array.from(document.querySelectorAll("button, [role='button']"));
+      for (const button of buttonNodes) {
+        const text = normalize(button.textContent);
+        const aria = normalize(button.getAttribute("aria-label"));
+        const title = normalize(button.getAttribute("title"));
+        const className = normalize(button.className || "");
+
+        for (const hint of textHints) {
+          const normalizedHint = normalize(hint);
+          if (text === normalizedHint || aria === normalizedHint || title === normalizedHint) {
+            pushCandidate(button, "exact-text", 120);
+            break;
+          }
+          if (
+            text.includes(normalizedHint) ||
+            aria.includes(normalizedHint) ||
+            title.includes(normalizedHint)
+          ) {
+            pushCandidate(button, "text-hint", 100);
+            break;
+          }
+        }
+
+        if (className.includes("course") || className.includes("lesson") || className.includes("mathim")) {
+          pushCandidate(button, "class-hint", 80);
+        }
+        if (button.querySelector(".fa-envelope-open-text")) {
+          pushCandidate(button, "icon-hint", 90);
+        }
+      }
+
+      candidates.sort((a, b) => b.score - a.score);
+      const best = candidates[0] || null;
+      if (!best) {
+        return { found: false, buttonIndex: -1, strategy: null, score: null, candidateCount: 0 };
+      }
+
+      const buttonIndex = buttonNodes.indexOf(best.button);
+      return {
+        found: buttonIndex >= 0,
+        buttonIndex,
+        strategy: best.strategy || null,
+        score: best.score || null,
+        candidateCount: candidates.length
+      };
+    },
+    { selectors: openCoursesSelectors, textHints: openCoursesTextHints }
+  );
+
+  if (!openCoursesTarget?.found) {
+    appendSessionLog(config.sessionLogPath, {
+      event: "portal_drift_detected",
+      phase: "open_courses_button",
+      missingSelectors: openCoursesSelectors,
+      url: page.url()
+    });
+    throw new Error("Open courses button did not appear.");
+  }
+
+  let openCoursesButton = page.locator("button, [role='button']").nth(openCoursesTarget.buttonIndex);
   await openCoursesButton.scrollIntoViewIfNeeded().catch(() => {});
 
   const popupPromise = page.waitForEvent("popup", { timeout: 5_000 }).catch(() => null);
   appendSessionLog(config.sessionLogPath, {
     event: "open_courses_button_click_attempt",
+    strategy: openCoursesTarget.strategy || null,
+    score: openCoursesTarget.score ?? null,
+    candidateCount: openCoursesTarget.candidateCount ?? 0,
     url: page.url()
   });
   setLastAction("Opening courses", { currentUrl: page.url() });
-  openCoursesButton = page.locator(openCoursesButtonSelector).first();
   await openCoursesButton.click({ force: true });
   const popup = await popupPromise;
   const targetPage = popup || page;
+  const clickNavigationMode = popup ? "popup" : "same_tab";
+  appendSessionLog(config.sessionLogPath, {
+    event: "open_courses_click_result",
+    navigationMode: clickNavigationMode,
+    url: targetPage.url()
+  });
 
   await targetPage.waitForURL(
     (url) => ELEARNING_URL_PATTERNS.some((pattern) => pattern.test(url.toString())),
@@ -372,9 +560,19 @@ async function openCoursePage(page) {
   } else {
     appendSessionLog(config.sessionLogPath, {
       event: "course_link_hidden_fallback",
+      reason: "course_link_not_visible",
       url: targetPage.url()
     });
-    await targetPage.goto(COURSE_URL, { waitUntil: "domcontentloaded" });
+    await targetPage.goto(ELEARNING_AUTOLOGIN_URL, { waitUntil: "domcontentloaded" });
+    await targetPage.waitForURL(
+      (url) =>
+        ELEARNING_URL_PATTERNS.some((pattern) => pattern.test(url.toString())) ||
+        COURSE_URL_PATTERN.test(url.toString()),
+      { timeout: Math.min(config.timeoutMs, 15_000) }
+    );
+    if (!COURSE_URL_PATTERN.test(targetPage.url())) {
+      await targetPage.goto(COURSE_URL, { waitUntil: "domcontentloaded" });
+    }
   }
 
   await targetPage.waitForLoadState("domcontentloaded");
@@ -390,12 +588,25 @@ async function openCoursePage(page) {
 }
 
 async function resolveCourseSections(page) {
-  await page.locator("li.section.main").first().waitFor({
-    state: "visible",
-    timeout: config.timeoutMs
-  });
+  try {
+    const primarySelector = "li.section.main";
+    const fallbackSelector = ".course-content li.section";
+    await page.locator(`${primarySelector}, ${fallbackSelector}`).first().waitFor({
+      state: "visible",
+      timeout: config.timeoutMs
+    });
+  } catch (error) {
+    appendSessionLog(config.sessionLogPath, {
+      event: "portal_drift_detected",
+      phase: "lesson_section_list",
+      missingSelectors: ["li.section.main"],
+      url: page.url(),
+      message: error.message
+    });
+    throw error;
+  }
 
-  return page.locator("li.section.main").evaluateAll((elements) =>
+  return page.locator("li.section.main, .course-content li.section").evaluateAll((elements) =>
     elements.map((element, index) => {
       const titleAnchor = element.querySelector(".sectionname a");
       const activityAnchor = element.querySelector(".activityinstance a.aalink");
@@ -421,13 +632,8 @@ async function resolveTargetSection(page, progressState) {
     throw new Error("None of the expected lesson sections (3-7) were found on the course page.");
   }
 
-  let targetSection =
-    lessonSections.find((section) => {
-      const lessonProgress = progressState.lessonProgress?.[section.id];
-      const completedMinutes = lessonProgress?.completedMinutes || 0;
-      return completedMinutes < section.targetHours * 60;
-    }) || null;
-
+  const selection = resolveLessonSelection(lessonSections, progressState);
+  let targetSection = lessonSections.find((section) => section.id === selection.selectedSectionId) || null;
   if (!targetSection) {
     const fallbackIndex = resolveSectionIndex(progressState, lessonSections.length);
     targetSection = lessonSections[fallbackIndex];
@@ -436,6 +642,17 @@ async function resolveTargetSection(page, progressState) {
   if (!targetSection || !targetSection.id || !targetSection.activityHref) {
     throw new Error("Could not resolve a valid target lesson section.");
   }
+
+  appendSessionLog(config.sessionLogPath, {
+    event: "lesson_selection_reason",
+    selectedSectionId: targetSection.id,
+    selectedLessonKey: targetSection.lessonKey,
+    reason: selection.reason,
+    candidateSnapshot: selection.candidateSnapshot
+  });
+  setLastAction(`Lesson ${targetSection.lessonKey} selected (${selection.reason})`, {
+    currentLesson: targetSection.id
+  });
 
   return targetSection;
 }
@@ -516,6 +733,13 @@ async function waitForPlayerReady(page, targetSection) {
 
   appendSessionLog(config.sessionLogPath, {
     event: "player_controls_timeout",
+    sectionId: targetSection.id,
+    url: page.url()
+  });
+  appendSessionLog(config.sessionLogPath, {
+    event: "portal_drift_detected",
+    phase: "scorm_controls",
+    missingSelectors: [PLAYER_PLAY_SELECTOR, PLAYER_NEXT_SELECTOR, PLAYER_MUTE_SELECTOR],
     sectionId: targetSection.id,
     url: page.url()
   });
@@ -666,16 +890,18 @@ async function startScormAttempt(page, targetSection, progressState) {
   await startPresentationPlayback(page, targetSection);
 
   progressState.lastScormStartedAt = new Date().toISOString();
+  progressState.currentSessionId = `${targetSection.id}-${Date.now()}`;
   saveProgressState(progressState);
   appendSessionLog(config.sessionLogPath, {
     event: "scorm_session_started",
     sectionId: targetSection.id,
-    startedAt: progressState.lastScormStartedAt
+    startedAt: progressState.lastScormStartedAt,
+    sessionId: progressState.currentSessionId
   });
   setLastAction("SCORM session started");
 }
 
-async function exitScormAttempt(page, targetSection, progressState, sessionMinutes) {
+async function exitScormAttempt(page, targetSection, progressState, sessionMinutes, sessionRange = null) {
   const safeSessionMs = Math.max(1, sessionMinutes) * 60 * 1000;
   console.log(`Waiting ${sessionMinutes} minutes before exiting the SCORM activity.`);
   updateRuntimeState({
@@ -685,6 +911,7 @@ async function exitScormAttempt(page, targetSection, progressState, sessionMinut
   const endAt = Date.now() + safeSessionMs;
 
   while (Date.now() < endAt) {
+    touchHeartbeat(STEP.PLAYBACK);
     if (!isPageAlive(page)) {
       appendSessionLog(config.sessionLogPath, {
         event: "scorm_session_interrupted",
@@ -746,7 +973,9 @@ async function exitScormAttempt(page, targetSection, progressState, sessionMinut
     return false;
   }
 
-  const exitActivityLink = page.locator('a[title="Έξοδος από τη δραστηριότητα"]').first();
+  const exitActivityLink = page
+    .locator('a[title="Έξοδος από τη δραστηριότητα"], a[href*="course/view.php?id=7378"]')
+    .first();
   await exitActivityLink.waitFor({ state: "visible", timeout: config.timeoutMs });
 
   const expectedCourseUrl = new RegExp(`/course/view\\.php\\?id=7378(?:#section-${targetSection.id})?$`);
@@ -759,24 +988,64 @@ async function exitScormAttempt(page, targetSection, progressState, sessionMinut
 
   await page.waitForLoadState("domcontentloaded");
   progressState.lastScormExitedAt = new Date().toISOString();
-  const completedMinutesToday = addCompletedMinutes(progressState, sessionMinutes);
-  const lessonProgress = addCompletedLessonMinutes(
-    progressState,
-    targetSection.id,
-    targetSection.targetHours,
-    sessionMinutes
-  );
+  const sessionId = progressState.currentSessionId || `${targetSection.id}-${Date.now()}`;
+  let dailySplit = {
+    completedMinutesToday: progressState.dailyProgress?.completedMinutes || 0,
+    minutesCountedToday: 0,
+    minutesCountedPreviousDay: 0
+  };
+  let lessonProgress = ensureLessonProgress(progressState, targetSection.id, targetSection.targetHours);
+  const applyResult = applySessionMinutesIdempotent(progressState, sessionId, "final", () => {
+    dailySplit = addCompletedMinutesSplitByCurrentAthensDay(
+      progressState,
+      sessionMinutes,
+      progressState.lastScormStartedAt,
+      progressState.lastScormExitedAt
+    );
+    lessonProgress = addCompletedLessonMinutes(
+      progressState,
+      targetSection.id,
+      targetSection.targetHours,
+      sessionMinutes
+    );
+  });
+  const completedMinutesToday = dailySplit.completedMinutesToday;
+  const invariantWarnings = validateAndClampProgressState(progressState, {
+    dailyLimitMinutes: progressState.dailyScormLimitMinutes || config.dailyScormLimitMinutes
+  });
+  for (const warning of invariantWarnings) {
+    appendSessionLog(config.sessionLogPath, {
+      event: "progress_invariant_warning",
+      ...warning
+    });
+  }
 
   appendSessionLog(config.sessionLogPath, {
     event: "scorm_session_completed",
     sectionId: targetSection.id,
     exitedAt: progressState.lastScormExitedAt,
     sessionMinutes,
+    chosenSessionMinutes: sessionMinutes,
+    sessionId,
+    idempotentApplied: applyResult.applied,
+    rangeMin: sessionRange?.min ?? null,
+    rangeMax: sessionRange?.max ?? null,
     completedMinutesToday,
     completedMinutesForSection: lessonProgress.completedMinutes,
     targetHours: targetSection.targetHours,
     url: page.url()
   });
+  if (dailySplit.minutesCountedToday !== sessionMinutes) {
+    appendSessionLog(config.sessionLogPath, {
+      event: "session_split_across_days",
+      sectionId: targetSection.id,
+      sessionMinutes,
+      minutesCountedToday: dailySplit.minutesCountedToday,
+      minutesCountedPreviousDay: dailySplit.minutesCountedPreviousDay,
+      startedAt: progressState.lastScormStartedAt,
+      exitedAt: progressState.lastScormExitedAt
+    });
+  }
   setLessonTotals(progressState.lessonProgress);
   updateRuntimeState({
     currentUrl: page.url(),
@@ -793,16 +1062,14 @@ async function exitScormAttempt(page, targetSection, progressState, sessionMinut
 }
 
 async function runDailyScormLoop(page, targetSection, progressState) {
-  const sessionMinutesOverride =
-    Number.isFinite(Number(progressState.scormSessionMinutes)) && Number(progressState.scormSessionMinutes) > 0
-      ? Number(progressState.scormSessionMinutes)
-      : config.maxScormSessionMinutes;
+  const sessionRange = resolveSessionRange(progressState, config);
   const dailyLimitOverride =
     Number.isFinite(Number(progressState.dailyScormLimitMinutes)) && Number(progressState.dailyScormLimitMinutes) > 0
       ? Number(progressState.dailyScormLimitMinutes)
       : config.dailyScormLimitMinutes;
 
   while (true) {
+    touchHeartbeat(STEP.PLAYBACK);
     const dailyProgress = ensureDailyProgress(progressState);
     const remainingMinutes = dailyLimitOverride - dailyProgress.completedMinutes;
 
@@ -812,8 +1079,7 @@ async function runDailyScormLoop(page, targetSection, progressState) {
         completedMinutesToday: dailyProgress.completedMinutes,
         dailyLimitMinutes: dailyLimitOverride
       });
-      updateRuntimeState({
-        status: "idle",
+      transitionRuntimeState("idle", {
         paused: false,
         nextPlannedExitAt: null,
         todayMinutes: dailyProgress.completedMinutes,
@@ -824,14 +1090,27 @@ async function runDailyScormLoop(page, targetSection, progressState) {
       return;
     }
 
-    const sessionMinutes = Math.min(sessionMinutesOverride, remainingMinutes);
+    const sessionMinutes = pickSessionMinutes(sessionRange, remainingMinutes);
     updateRuntimeState({
       currentLesson: targetSection.id,
       currentLessonTitle: targetSection.title,
       nextPlannedExitAt: new Date(Date.now() + sessionMinutes * 60 * 1000).toISOString()
     });
+    appendSessionLog(config.sessionLogPath, {
+      event: "scorm_session_randomized",
+      sectionId: targetSection.id,
+      chosenSessionMinutes: sessionMinutes,
+      rangeMin: sessionRange.min,
+      rangeMax: sessionRange.max
+    });
     await startScormAttempt(page, targetSection, progressState);
-    const completedAttempt = await exitScormAttempt(page, targetSection, progressState, sessionMinutes);
+    const completedAttempt = await exitScormAttempt(
+      page,
+      targetSection,
+      progressState,
+      sessionMinutes,
+      sessionRange
+    );
     if (!completedAttempt) {
       return;
     }
@@ -839,38 +1118,111 @@ async function runDailyScormLoop(page, targetSection, progressState) {
 }
 
 async function runWorkflow(page) {
+  let recoveryAttempts = 0;
+  const supervisor = createRunSupervisor({
+    appendLog: (entry) => {
+      appendSessionLog(config.sessionLogPath, entry);
+    },
+    onStepSuccess: async (step) => {
+      touchHeartbeat(step);
+      updateRuntimeDiagnostics({
+        currentStep: step,
+        lastSuccessfulStep: step,
+        lastStableCheckpoint: step
+      });
+    },
+    onStepFailure: async (step, attempt, error) => {
+      updateRuntimeDiagnostics({
+        currentStep: step,
+        lastSelectorFailure: error?.message || "step_failed"
+      });
+      appendSessionLog(config.sessionLogPath, {
+        event: "supervisor_terminal_failure",
+        step,
+        attempt,
+        message: error?.message || String(error)
+      });
+    },
+    onRecovery: async ({ step, attempt, recoveryAction, message }) => {
+      recoveryAttempts += 1;
+      updateRuntimeDiagnostics({
+        currentStep: step,
+        lastRecoveryAction: recoveryAction,
+        recoveryAttempts
+      });
+      appendSessionLog(config.sessionLogPath, {
+        event: "recovery_playbook_applied",
+        step,
+        attempt,
+        recoveryAction,
+        message
+      });
+    }
+  });
   const progressState = ensureProgressStarted(loadProgressState(config.progressStatePath));
-  ensureDailyProgress(progressState);
-  setLessonTotals(progressState.lessonProgress);
-  updateRuntimeState({
-    status: "running",
-    paused: false,
-    currentUrl: page.url(),
-    todayMinutes: progressState.dailyProgress.completedMinutes,
-    dailyLimitMinutes:
-      Number.isFinite(Number(progressState.dailyScormLimitMinutes)) && Number(progressState.dailyScormLimitMinutes) > 0
-        ? Number(progressState.dailyScormLimitMinutes)
-        : config.dailyScormLimitMinutes
-  });
-  appendSessionLog(config.sessionLogPath, {
-    event: "workflow_started",
-    baseSectionIndex: progressState.baseSectionIndex
-  });
-  setLastAction("Workflow started");
+  try {
+    ensureDailyProgress(progressState);
+    setLessonTotals(progressState.lessonProgress);
+    transitionRuntimeState("running", {
+      paused: false,
+      currentUrl: page.url(),
+      todayMinutes: progressState.dailyProgress.completedMinutes,
+      dailyLimitMinutes:
+        Number.isFinite(Number(progressState.dailyScormLimitMinutes)) && Number(progressState.dailyScormLimitMinutes) > 0
+          ? Number(progressState.dailyScormLimitMinutes)
+          : config.dailyScormLimitMinutes
+    });
+    appendSessionLog(config.sessionLogPath, {
+      event: "workflow_started",
+      baseSectionIndex: progressState.baseSectionIndex
+    });
+    setLastAction("Workflow started");
 
-  await syncLessonStatsFromPanel(page, progressState);
+    const authResult = await supervisor.executeStep(STEP.AUTH, async () => {
+      await syncLessonStatsFromPanel(page, progressState);
+      return { ok: true };
+    });
+    if (!authResult.ok) {
+      throw new StepError(STEP.AUTH, authResult.error, authResult.kind);
+    }
 
-  const coursePage = await openCoursePage(page);
-  const targetSection = await resolveTargetSection(coursePage, progressState);
-  ensureLessonProgress(progressState, targetSection.id, targetSection.targetHours);
-  setLessonTotals(progressState.lessonProgress);
-  appendSessionLog(config.sessionLogPath, {
-    event: "lesson_target_synced",
-    sectionId: targetSection.id,
-    targetHours: targetSection.targetHours
-  });
-  setLastAction("Lesson target synced");
-  await runDailyScormLoop(coursePage, targetSection, progressState);
+    const openCourseResult = await supervisor.executeStep(STEP.OPEN_COURSE, async () => {
+      const coursePage = await openCoursePage(page);
+      return { coursePage };
+    });
+    if (!openCourseResult.ok) {
+      throw new StepError(STEP.OPEN_COURSE, openCourseResult.error, openCourseResult.kind);
+    }
+    const coursePage = openCourseResult.data.coursePage;
+
+    const openScormResult = await supervisor.executeStep(STEP.OPEN_SCORM, async () => {
+      const targetSection = await resolveTargetSection(coursePage, progressState);
+      return { targetSection };
+    });
+    if (!openScormResult.ok) {
+      throw new StepError(STEP.OPEN_SCORM, openScormResult.error, openScormResult.kind);
+    }
+    const targetSection = openScormResult.data.targetSection;
+    ensureLessonProgress(progressState, targetSection.id, targetSection.targetHours);
+    setLessonTotals(progressState.lessonProgress);
+    appendSessionLog(config.sessionLogPath, {
+      event: "lesson_target_synced",
+      sectionId: targetSection.id,
+      targetHours: targetSection.targetHours
+    });
+    setLastAction("Lesson target synced");
+    const playbackResult = await supervisor.executeStep(STEP.PLAYBACK, async () => {
+      await runDailyScormLoop(coursePage, targetSection, progressState);
+      return { done: true };
+    });
+    if (!playbackResult.ok) {
+      throw new StepError(STEP.PLAYBACK, playbackResult.error, playbackResult.kind);
+    }
+  } finally {
+    updateRuntimeState({
+      supervisorTimeline: supervisor.getTimeline(200)
+    });
+  }
 }
 
 async function main() {
@@ -881,8 +1233,7 @@ async function main() {
     progressStatePath: config.progressStatePath,
     sessionLogPath: config.sessionLogPath
   });
-  updateRuntimeState({
-    status: "idle",
+  transitionRuntimeState("idle", {
     paused: false,
     dailyLimitMinutes: config.dailyScormLimitMinutes,
     nextPlannedExitAt: null
@@ -906,10 +1257,12 @@ async function main() {
 
   try {
     await ensureAuthenticated(page);
+    if (process.argv.includes("--test-login-only")) {
+      return;
+    }
     await runWorkflow(page);
   } finally {
-    updateRuntimeState({
-      status: "idle",
+    transitionRuntimeState("idle", {
       paused: false,
       nextPlannedExitAt: null,
       currentUrl: getSafePageUrl(page)
@@ -922,8 +1275,7 @@ async function main() {
 }
 
 main().catch((error) => {
-  updateRuntimeState({
-    status: "error",
+  transitionRuntimeState("error", {
     paused: false,
     nextPlannedExitAt: null
   });
