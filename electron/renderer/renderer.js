@@ -1895,9 +1895,12 @@ async function loadUrl(url) {
     await withRetry(() => webview.loadURL(url), { retries: 2, phase: "webview_load_url" });
   } catch (error) {
     const rawMessage = String(error && error.message ? error.message : error || "");
+    const nestedCause = error && error.cause ? String(error.cause.message || error.cause || "") : "";
+    const combined = `${rawMessage} ${nestedCause}`;
     const isExpectedAbort =
-      /ERR_ABORTED|\(-3\)|loading\s+'[^']+'/i.test(rawMessage) ||
-      Number(error?.errno) === -3;
+      /ERR_ABORTED|\(-3\)|loading\s+['"][^'"]+['"]/i.test(combined) ||
+      Number(error?.errno) === -3 ||
+      Number(error?.cause?.errno) === -3;
     if (!isExpectedAbort) {
       throw error;
     }
@@ -2316,6 +2319,46 @@ async function waitForUrlMatch(pattern, timeoutMs = appConfig.timeoutMs) {
       errorMessage: `Timed out waiting for URL ${pattern}`
     }
   );
+}
+
+const SCORM_ENTRY_URL_RE = /mod\/scorm\/(view|player)\.php/i;
+
+/**
+ * Waits until the webview URL is a SCORM view/player page, or throws.
+ * If Moodle sends the user to the login page, throws with code SCORM_LOGIN_REDIRECT
+ * so callers can run session recovery instead of waiting the full timeout.
+ */
+async function waitForScormUrlWithLoginDetection(timeoutMs = appConfig.timeoutMs, intervalMs = 500) {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < timeoutMs) {
+    throwIfStopped();
+    const currentUrl = getSafeWebviewUrl() || "";
+    if (SCORM_ENTRY_URL_RE.test(currentUrl)) {
+      return currentUrl;
+    }
+    if (isMoodleLoginUrl(currentUrl)) {
+      const err = new Error("SCORM open redirected to Moodle login.");
+      err.code = "SCORM_LOGIN_REDIRECT";
+      err.url = currentUrl;
+      throw err;
+    }
+    await delay(intervalMs);
+  }
+  throw new Error("SCORM page did not open in embedded browser.");
+}
+
+async function recoverScormOpenAfterLoginRedirect(targetSection) {
+  const lessonUrl = targetSection.activityHref;
+  await appendLog("scorm_open_redirected_to_login", {
+    sectionId: targetSection.id,
+    lessonUrl: lessonUrl || null,
+    url: getSafeWebviewUrl() || null
+  });
+  if (!lessonUrl) {
+    throw new Error("SCORM recovery skipped: missing activity URL.");
+  }
+  await openCourseViaElearningAutologin();
+  await loadUrl(lessonUrl);
 }
 
 async function waitForSelector(selector, timeoutMs = appConfig.timeoutMs) {
@@ -3466,7 +3509,7 @@ async function runEmbeddedAutomation() {
         sectionId: targetSection.id,
         lessonUrl: targetSection.activityHref || null
       });
-      await executeInWebview(`
+      const clickedActivityLink = await executeInWebview(`
         (() => {
           const section = document.querySelector(${JSON.stringify(`#section-${targetSection.id}`)});
           const link = section ? section.querySelector(".activityinstance a.aalink") : null;
@@ -3477,17 +3520,39 @@ async function runEmbeddedAutomation() {
         })()
       `);
 
-      await waitForCondition(
-        async () => {
-          const currentUrl = getSafeWebviewUrl() || "";
-          return /mod\/scorm\/(view|player)\.php/i.test(currentUrl) ? currentUrl : null;
-        },
-        {
-          timeoutMs: appConfig.timeoutMs,
-          intervalMs: 500,
-          errorMessage: "SCORM page did not open in embedded browser."
+      if (!clickedActivityLink && targetSection.activityHref) {
+        await appendLog("scorm_activity_click_failed_try_loadurl", {
+          sectionId: targetSection.id,
+          lessonUrl: targetSection.activityHref
+        });
+        await loadUrl(targetSection.activityHref);
+      } else if (!clickedActivityLink) {
+        throw new Error("SCORM activity link not found on course page.");
+      }
+
+      const maxScormLoginRecoveries = 2;
+      let scormLoginRecoveriesUsed = 0;
+      let scormWaitTimeoutMs = appConfig.timeoutMs;
+
+      while (true) {
+        try {
+          await waitForScormUrlWithLoginDetection(scormWaitTimeoutMs, 500);
+          break;
+        } catch (error) {
+          if (error && error.code === "SCORM_LOGIN_REDIRECT") {
+            if (scormLoginRecoveriesUsed >= maxScormLoginRecoveries) {
+              throw new Error(
+                `SCORM page did not open after login redirect recovery (${maxScormLoginRecoveries} attempts). Last URL: ${getSafeWebviewUrl() || "-"}`
+              );
+            }
+            scormLoginRecoveriesUsed += 1;
+            await recoverScormOpenAfterLoginRedirect(targetSection);
+            scormWaitTimeoutMs = Math.min(20_000, appConfig.timeoutMs);
+            continue;
+          }
+          throw error;
         }
-      );
+      }
 
       await appendLog("scorm_opened", {
         sectionId: targetSection.id,
