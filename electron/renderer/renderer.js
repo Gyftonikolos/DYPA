@@ -547,10 +547,14 @@ async function updateRuntimeState(patch, lastAction = null) {
     ...patch,
     processRunning: embeddedAutomation.running
   };
+  const shouldRefreshHeartbeat =
+    lastAction !== null || embeddedAutomation.running || patch?.processRunning === true;
+  if (shouldRefreshHeartbeat) {
+    runtimeDiagnostics.heartbeatAt = new Date().toISOString();
+  }
   if (lastAction !== null) {
     nextPatch.lastAction = lastAction;
     runtimeDiagnostics.currentStep = lastAction;
-    runtimeDiagnostics.heartbeatAt = new Date().toISOString();
     if (!/failed|error|timed out|missing/i.test(lastAction)) {
       runtimeDiagnostics.lastSuccessfulStep = lastAction;
       runtimeDiagnostics.lastStableCheckpoint = lastAction;
