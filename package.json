@@ -14,7 +14,7 @@
     "test:phase5": "node tests/phase5-schedule-smoke.test.js",
     "test:ux-smoke": "node tests/ux-smoke-checklist.test.js",
     "test:unit": "node tests/unit/sessionPolicy.unit.test.js && node tests/unit/retryPolicy.unit.test.js && node tests/unit/progressStore.unit.test.js && node tests/unit/runtimeState.unit.test.js && node tests/unit/settingsStore.unit.test.js && node tests/unit/rendererHeartbeat.unit.test.js && node tests/unit/scormOpenRecovery.unit.test.js",
-    "test:integration": "node tests/integration/preload.integration.test.js && node tests/integration/ipcMain.integration.test.js && node tests/integration/staleRunMonitor.integration.test.js && node tests/integration/rendererStatic.integration.test.js",
+    "test:integration": "node tests/integration/preload.integration.test.js && node tests/integration/ipcMain.integration.test.js && node tests/integration/staleRunMonitor.integration.test.js && node tests/integration/webviewDialogAutoAccept.integration.test.js && node tests/integration/rendererStatic.integration.test.js",
     "test:e2e-ui": "node tests/e2e/ui-theme-simple.e2e.test.js",
     "test:all": "npm run test:unit && npm run test:integration && npm run test:e2e-ui && npm run test:phase2 && npm run test:phase3 && npm run test:phase5 && npm run test:ux-smoke",
     "check:syntax": "node --check src/index.js && node --check src/runtimeState.js && node --check src/progressStore.js && node --check electron/main.js && node --check electron/preload.js && node --check electron/renderer/renderer.js",

@@ -12,6 +12,12 @@ function main() {
   assert.ok(rendererJs.includes('"scorm_open_redirected_to_login"'));
   assert.ok(rendererJs.includes('"scorm_activity_click_failed_try_loadurl"'));
   assert.ok(rendererJs.includes("SCORM_ENTRY_URL_RE"));
+  assert.ok(rendererJs.includes("enqueueWebviewLoad"));
+  assert.ok(rendererJs.includes("webviewLoadQueue"));
+  assert.ok(rendererJs.includes("WEBVIEW_ABORT_DEDUPE_MS"));
+  assert.ok(rendererJs.includes('"webview_load_aborted_expected"'));
+  assert.ok(rendererJs.includes("onWebviewJsDialog"));
+  assert.ok(rendererJs.includes('"webview_js_dialog_auto_accepted"'));
   assert.ok(
     rendererJs.includes('loading\\s+[\'"][^\'"]+[\'"]'),
     "Expected loadUrl abort matcher to allow single- or double-quoted loading URLs."

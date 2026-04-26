@@ -2,6 +2,7 @@ let appConfig = null;
 let currentSettings = null;
 let fullLogs = [];
 let detachWebviewWindowOpenListener = null;
+let detachWebviewJsDialogListener = null;
 let activeHelpKey = null;
 let activeLogGroup = "all";
 let lastRuntimeState = {};
@@ -12,6 +13,8 @@ const notificationCooldownByHash = {};
 const NOTIFICATION_COOLDOWN_MS = 30_000;
 const webviewConsoleCooldownByMessage = {};
 const WEBVIEW_CONSOLE_DEDUPE_MS = 60_000;
+const webviewAbortCooldownByKey = {};
+const WEBVIEW_ABORT_DEDUPE_MS = 15_000;
 
 const DEFAULT_FEATURE_FLAGS = {
   notifications: {
@@ -194,6 +197,13 @@ const uiTelemetry = {
 };
 
 const WEBVIEW_READY_TIMEOUT_MS = 60000;
+let webviewLoadQueue = Promise.resolve();
+
+function enqueueWebviewLoad(task) {
+  const chained = webviewLoadQueue.then(task, task);
+  webviewLoadQueue = chained.catch(() => null);
+  return chained;
+}
 
 function fmtDate(value) {
   if (!value) return "-";
@@ -1883,29 +1893,42 @@ function syncEmbeddedUrl() {
 }
 
 async function loadUrl(url) {
-  const webview = getWebview();
-  if (!embeddedAutomation.webviewReady) {
-    webview.setAttribute("src", url);
-    syncEmbeddedUrl();
-    await waitForWebviewReady();
-    return;
-  }
-
-  try {
-    await withRetry(() => webview.loadURL(url), { retries: 2, phase: "webview_load_url" });
-  } catch (error) {
-    const rawMessage = String(error && error.message ? error.message : error || "");
-    const nestedCause = error && error.cause ? String(error.cause.message || error.cause || "") : "";
-    const combined = `${rawMessage} ${nestedCause}`;
-    const isExpectedAbort =
-      /ERR_ABORTED|\(-3\)|loading\s+['"][^'"]+['"]/i.test(combined) ||
-      Number(error?.errno) === -3 ||
-      Number(error?.cause?.errno) === -3;
-    if (!isExpectedAbort) {
-      throw error;
+  return enqueueWebviewLoad(async () => {
+    const webview = getWebview();
+    if (!embeddedAutomation.webviewReady) {
+      webview.setAttribute("src", url);
+      syncEmbeddedUrl();
+      await waitForWebviewReady();
+      return;
     }
-  }
-  syncEmbeddedUrl();
+
+    try {
+      await withRetry(() => webview.loadURL(url), { retries: 2, phase: "webview_load_url" });
+    } catch (error) {
+      const rawMessage = String(error && error.message ? error.message : error || "");
+      const nestedCause = error && error.cause ? String(error.cause.message || error.cause || "") : "";
+      const combined = `${rawMessage} ${nestedCause}`;
+      const isExpectedAbort =
+        /ERR_ABORTED|\(-3\)|loading\s+['"][^'"]+['"]/i.test(combined) ||
+        Number(error?.errno) === -3 ||
+        Number(error?.cause?.errno) === -3;
+      if (!isExpectedAbort) {
+        throw error;
+      }
+
+      const abortKey = `${String(url || "-")}:${combined.replace(/\s+/g, " ").trim().slice(0, 180)}`;
+      const now = Date.now();
+      const lastAbortLoggedAt = Number(webviewAbortCooldownByKey[abortKey] || 0);
+      if (now - lastAbortLoggedAt >= WEBVIEW_ABORT_DEDUPE_MS) {
+        webviewAbortCooldownByKey[abortKey] = now;
+        appendLog("webview_load_aborted_expected", {
+          url: String(url || null),
+          message: combined.trim().slice(0, 300)
+        }).catch(() => {});
+      }
+    }
+    syncEmbeddedUrl();
+  });
 }
 
 async function executeInWebview(script) {
@@ -3813,6 +3836,23 @@ function setupEmbeddedBrowser() {
             message: error?.message || String(error || "Unknown popup interception error")
           }).catch(() => {})
         );
+    });
+  }
+  if (typeof window.desktopApi.onWebviewJsDialog === "function") {
+    if (typeof detachWebviewJsDialogListener === "function") {
+      detachWebviewJsDialogListener();
+    }
+    detachWebviewJsDialogListener = window.desktopApi.onWebviewJsDialog((payload) => {
+      const dialogType = String(payload?.dialogType || "unknown");
+      appendLog("webview_js_dialog_auto_accepted", {
+        dialogType,
+        message: String(payload?.message || "").slice(0, 300),
+        url: payload?.url || getSafeWebviewUrl() || null
+      }).catch(() => {});
+      updateRuntimeState(
+        { currentUrl: payload?.url || getSafeWebviewUrl() || null },
+        `Auto-accepted ${dialogType} dialog`
+      ).catch(() => {});
     });
   }
 

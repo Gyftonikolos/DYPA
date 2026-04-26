@@ -35,5 +35,15 @@ contextBridge.exposeInMainWorld("desktopApi", {
     return () => {
       ipcRenderer.removeListener("embedded:webview-window-open", listener);
     };
+  },
+  onWebviewJsDialog: (handler) => {
+    if (typeof handler !== "function") {
+      return () => {};
+    }
+    const listener = (_event, payload) => handler(payload);
+    ipcRenderer.on("embedded:webview-js-dialog", listener);
+    return () => {
+      ipcRenderer.removeListener("embedded:webview-js-dialog", listener);
+    };
   }
 });

@@ -438,31 +438,62 @@ function createWindow() {
 
 app.whenReady().then(() => {
   app.on("web-contents-created", (_event, contents) => {
-    if (typeof contents.setWindowOpenHandler !== "function") {
-      return;
+    const broadcastToWindows = (channel, payload) => {
+      for (const win of BrowserWindow.getAllWindows()) {
+        win.webContents.send(channel, payload);
+      }
+    };
+
+    if (typeof contents.setWindowOpenHandler === "function") {
+      contents.setWindowOpenHandler((details) => {
+        const targetUrl = String(details?.url || "").trim();
+        if (!targetUrl) {
+          return { action: "deny" };
+        }
+
+        const sourceUrl = String(details?.referrer?.url || "").trim() || null;
+        const shouldIntercept = /https?:\/\/(?:[^/]+\.)?golearn\.gr\//i.test(targetUrl);
+
+        if (shouldIntercept) {
+          appendJsonLine(config.sessionLogPath, {
+            event: "webview_window_open_captured",
+            targetUrl,
+            sourceUrl
+          });
+          broadcastToWindows("embedded:webview-window-open", { targetUrl, sourceUrl });
+        }
+
+        return { action: "deny" };
+      });
     }
 
-    contents.setWindowOpenHandler((details) => {
-      const targetUrl = String(details?.url || "").trim();
-      if (!targetUrl) {
-        return { action: "deny" };
+    contents.on("javascript-dialog-opening", (...args) => {
+      const [event, maybeDetails, maybeCallback] = args;
+      const details = maybeDetails && typeof maybeDetails === "object" ? maybeDetails : {};
+      const dialogType = String(details.type || details.dialogType || "unknown");
+      const messageText = String(details.messageText || details.message || "");
+      const sourceUrl = String(details.url || contents.getURL?.() || "").trim() || null;
+      const payload = {
+        dialogType,
+        message: messageText,
+        url: sourceUrl,
+        autoAccepted: true
+      };
+      appendJsonLine(config.sessionLogPath, {
+        event: "webview_javascript_dialog_auto_accepted",
+        ...payload
+      });
+      broadcastToWindows("embedded:webview-js-dialog", payload);
+
+      if (typeof event?.preventDefault === "function") {
+        event.preventDefault();
       }
 
-      const sourceUrl = String(details?.referrer?.url || "").trim() || null;
-      const shouldIntercept = /https?:\/\/(?:[^/]+\.)?golearn\.gr\//i.test(targetUrl);
-
-      if (shouldIntercept) {
-        appendJsonLine(config.sessionLogPath, {
-          event: "webview_window_open_captured",
-          targetUrl,
-          sourceUrl
-        });
-        for (const win of BrowserWindow.getAllWindows()) {
-          win.webContents.send("embedded:webview-window-open", { targetUrl, sourceUrl });
-        }
+      if (typeof maybeCallback === "function") {
+        maybeCallback(true);
+      } else if (typeof event?.returnValue !== "undefined") {
+        event.returnValue = true;
       }
-
-      return { action: "deny" };
     });
   });
 

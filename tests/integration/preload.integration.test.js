@@ -5,8 +5,8 @@ function main() {
   const originalLoad = Module._load;
   let exposedApi = null;
   const invokedChannels = [];
-  let onSubscription = null;
-  let removedSubscription = null;
+  const onSubscriptions = [];
+  const removedSubscriptions = [];
 
   Module._load = function patchedLoad(request, parent, isMain) {
     if (request === "electron") {
@@ -22,10 +22,10 @@ function main() {
             return { ok: true };
           },
           on: (channel, listener) => {
-            onSubscription = { channel, listener };
+            onSubscriptions.push({ channel, listener });
           },
           removeListener: (channel, listener) => {
-            removedSubscription = { channel, listener };
+            removedSubscriptions.push({ channel, listener });
           }
         }
       };
@@ -45,14 +45,20 @@ function main() {
   assert.strictEqual(typeof exposedApi.getSettings, "function");
   assert.strictEqual(typeof exposedApi.saveSettings, "function");
   assert.strictEqual(typeof exposedApi.onWebviewWindowOpen, "function");
+  assert.strictEqual(typeof exposedApi.onWebviewJsDialog, "function");
 
   exposedApi.getSettings();
   exposedApi.getState();
   const unsubscribe = exposedApi.onWebviewWindowOpen(() => {});
-  assert.strictEqual(onSubscription.channel, "embedded:webview-window-open");
+  const unsubscribeDialog = exposedApi.onWebviewJsDialog(() => {});
+  assert.ok(onSubscriptions.some((entry) => entry.channel === "embedded:webview-window-open"));
+  assert.ok(onSubscriptions.some((entry) => entry.channel === "embedded:webview-js-dialog"));
   assert.strictEqual(typeof unsubscribe, "function");
+  assert.strictEqual(typeof unsubscribeDialog, "function");
   unsubscribe();
-  assert.strictEqual(removedSubscription.channel, "embedded:webview-window-open");
+  unsubscribeDialog();
+  assert.ok(removedSubscriptions.some((entry) => entry.channel === "embedded:webview-window-open"));
+  assert.ok(removedSubscriptions.some((entry) => entry.channel === "embedded:webview-js-dialog"));
   assert.ok(invokedChannels.includes("settings:get"));
   assert.ok(invokedChannels.includes("dashboard:get-state"));
   console.log("preload integration tests passed");
