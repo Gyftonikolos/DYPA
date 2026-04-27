@@ -76,6 +76,11 @@ async function main() {
     assert.ok(handlers["session:resolve-range"]);
     assert.ok(handlers["session:pick-minutes"]);
     assert.ok(handlers["dashboard:get-app-config"]);
+    const appConfig = await handlers["dashboard:get-app-config"]();
+    assert.strictEqual(
+      appConfig.elearningAutologinUrl,
+      "https://elearning.golearn.gr/local/mdl_autologin/autologin.php"
+    );
 
     const settingsGet = await handlers["settings:get"]();
     assert.ok(settingsGet.settings);

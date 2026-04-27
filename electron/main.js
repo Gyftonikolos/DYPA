@@ -551,6 +551,7 @@ app.whenReady().then(() => {
     loginUrl: config.loginUrl || "https://edu.golearn.gr/login?returnUrl=%2f",
     trainingUrl: config.baseUrl,
     courseUrl: "https://elearning.golearn.gr/course/view.php?id=7378",
+    elearningAutologinUrl: "https://elearning.golearn.gr/local/mdl_autologin/autologin.php",
     directCourseMode: Boolean(config.directCourseMode),
     timeoutMs: config.timeoutMs,
     scormSessionMinMinutes: config.scormSessionMinMinutes,

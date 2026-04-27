@@ -16,6 +16,11 @@ function main() {
   assert.ok(rendererJs.includes("webviewLoadQueue"));
   assert.ok(rendererJs.includes("WEBVIEW_ABORT_DEDUPE_MS"));
   assert.ok(rendererJs.includes('"webview_load_aborted_expected"'));
+  assert.ok(rendererJs.includes('"webview_load_abort_unresolved"'));
+  assert.ok(rendererJs.includes("getElearningAutologinUrl"));
+  assert.ok(rendererJs.includes('"autologin_bridge_attempted"'));
+  assert.ok(rendererJs.includes('"autologin_bridge_resolved"'));
+  assert.ok(rendererJs.includes('"autologin_bridge_login_wall"'));
   assert.ok(rendererJs.includes("onWebviewJsDialog"));
   assert.ok(rendererJs.includes('"webview_js_dialog_auto_accepted"'));
   assert.ok(

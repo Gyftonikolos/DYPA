@@ -15,6 +15,7 @@ const webviewConsoleCooldownByMessage = {};
 const WEBVIEW_CONSOLE_DEDUPE_MS = 60_000;
 const webviewAbortCooldownByKey = {};
 const WEBVIEW_ABORT_DEDUPE_MS = 15_000;
+const webviewAbortStatsByUrl = {};
 
 const DEFAULT_FEATURE_FLAGS = {
   notifications: {
@@ -1921,10 +1922,23 @@ async function loadUrl(url) {
       const lastAbortLoggedAt = Number(webviewAbortCooldownByKey[abortKey] || 0);
       if (now - lastAbortLoggedAt >= WEBVIEW_ABORT_DEDUPE_MS) {
         webviewAbortCooldownByKey[abortKey] = now;
+        const urlKey = String(url || "-");
+        const previous = webviewAbortStatsByUrl[urlKey] || { count: 0, lastAt: 0 };
+        const shouldResetCounter = now - Number(previous.lastAt || 0) > WEBVIEW_ABORT_DEDUPE_MS;
+        const count = shouldResetCounter ? 1 : Number(previous.count || 0) + 1;
+        webviewAbortStatsByUrl[urlKey] = { count, lastAt: now };
         appendLog("webview_load_aborted_expected", {
           url: String(url || null),
-          message: combined.trim().slice(0, 300)
+          message: combined.trim().slice(0, 300),
+          count
         }).catch(() => {});
+        if (count >= 3) {
+          appendLog("webview_load_abort_unresolved", {
+            url: String(url || null),
+            count,
+            message: combined.trim().slice(0, 300)
+          }).catch(() => {});
+        }
       }
     }
     syncEmbeddedUrl();
@@ -2061,6 +2075,10 @@ function isMoodleLoginUrl(url) {
   return /https:\/\/elearning\.golearn\.gr\/login\/index\.php/i.test(url || "");
 }
 
+function getElearningAutologinUrl() {
+  return String(appConfig?.elearningAutologinUrl || "https://elearning.golearn.gr/local/mdl_autologin/autologin.php");
+}
+
 async function openCourseViaElearningAutologin() {
   const recoveryStartedAt = Date.now();
   const recoveryBudgetMs = Math.min(appConfig.timeoutMs, 35_000);
@@ -2072,6 +2090,60 @@ async function openCourseViaElearningAutologin() {
 
   let lastUrl = getSafeWebviewUrl() || null;
   for (let attempt = 1; attempt <= 2; attempt += 1) {
+    const attemptStartedAt = Date.now();
+    const bridgeUrl = getElearningAutologinUrl();
+    assertRecoveryBudget();
+    await appendLog("autologin_bridge_attempted", {
+      attempt,
+      phase: "bridge_probe",
+      fromUrl: getSafeWebviewUrl() || null,
+      targetUrl: bridgeUrl
+    });
+    await loadUrl(bridgeUrl);
+    await waitForCondition(
+      async () => {
+        const currentUrl = getSafeWebviewUrl() || "";
+        if (isCourseUrl(currentUrl) || isElearningLandingUrl(currentUrl) || isMoodleLoginUrl(currentUrl)) {
+          return currentUrl;
+        }
+        return null;
+      },
+      {
+        timeoutMs: Math.min(appConfig.timeoutMs, 8_000),
+        intervalMs: 500,
+        errorMessage: "Autologin bridge probe did not resolve."
+      }
+    ).catch(async (error) => {
+      await appendLog("elearning_probe_stalled", {
+        attempt,
+        phase: "bridge_probe",
+        message: error.message || "autologin_bridge_probe_timeout",
+        url: getSafeWebviewUrl() || null
+      });
+      return null;
+    });
+
+    lastUrl = getSafeWebviewUrl() || null;
+    await appendLog("autologin_bridge_resolved", {
+      attempt,
+      phase: "bridge_probe",
+      fromUrl: bridgeUrl,
+      toUrl: lastUrl,
+      elapsedMs: Date.now() - attemptStartedAt
+    });
+    if (isCourseUrl(lastUrl)) {
+      return;
+    }
+    if (isMoodleLoginUrl(lastUrl)) {
+      await appendLog("autologin_bridge_login_wall", {
+        attempt,
+        phase: "bridge_probe",
+        fromUrl: bridgeUrl,
+        toUrl: lastUrl,
+        elapsedMs: Date.now() - attemptStartedAt
+      });
+    }
+
     assertRecoveryBudget();
     await appendLog("auth_recovery_step_applied", {
       step: "elearning_my_probe",
@@ -2286,6 +2358,46 @@ async function openCourseViaElearningAutologin() {
       }
     ).catch(() => null);
     lastUrl = getSafeWebviewUrl() || null;
+    if (!isCourseUrl(lastUrl)) {
+      const bridgeRetryUrl = getElearningAutologinUrl();
+      await appendLog("autologin_bridge_attempted", {
+        attempt: 3,
+        phase: "post_training_bridge_probe",
+        fromUrl: getSafeWebviewUrl() || null,
+        targetUrl: bridgeRetryUrl
+      });
+      await loadUrl(bridgeRetryUrl);
+      await waitForCondition(
+        async () => {
+          const currentUrl = getSafeWebviewUrl() || "";
+          return isCourseUrl(currentUrl) || isElearningLandingUrl(currentUrl) || isMoodleLoginUrl(currentUrl)
+            ? currentUrl
+            : null;
+        },
+        {
+          timeoutMs: Math.min(appConfig.timeoutMs, 8_000),
+          intervalMs: 500,
+          errorMessage: "Post-training autologin bridge probe did not resolve."
+        }
+      ).catch(() => null);
+      lastUrl = getSafeWebviewUrl() || null;
+      await appendLog("autologin_bridge_resolved", {
+        attempt: 3,
+        phase: "post_training_bridge_probe",
+        fromUrl: bridgeRetryUrl,
+        toUrl: lastUrl,
+        elapsedMs: null
+      });
+      if (isMoodleLoginUrl(lastUrl)) {
+        await appendLog("autologin_bridge_login_wall", {
+          attempt: 3,
+          phase: "post_training_bridge_probe",
+          fromUrl: bridgeRetryUrl,
+          toUrl: lastUrl,
+          elapsedMs: null
+        });
+      }
+    }
     if (!isCourseUrl(lastUrl)) {
       await loadUrl(appConfig.courseUrl);
       await waitForCondition(
