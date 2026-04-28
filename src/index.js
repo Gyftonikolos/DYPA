@@ -51,6 +51,72 @@ const LESSON_SECTION_CONFIG = [
   { id: "7", targetHours: 30, lessonKey: "E5" }
 ];
 
+const LOG_ERROR_TAXONOMY = {
+  login_attempt_navigation_timeout: { errorCode: "AUTH_LOGIN_NAV_TIMEOUT", source: "auth.ensureAuthenticated" },
+  auth_attempt_failed: { errorCode: "AUTH_ATTEMPT_FAILED", source: "auth.ensureAuthenticated" },
+  portal_drift_detected: { errorCode: "PORTAL_UI_DRIFT", source: "course.resolveSections" },
+  supervisor_terminal_failure: { errorCode: "SUPERVISOR_STEP_FAILED", source: "workflow.supervisor" },
+  unhandled_promise_rejection: { errorCode: "PROCESS_UNHANDLED_REJECTION", source: "process.global" },
+  uncaught_exception: { errorCode: "PROCESS_UNCAUGHT_EXCEPTION", source: "process.global" },
+  workflow_failed: { errorCode: "WORKFLOW_MAIN_FAILED", source: "workflow.main" }
+};
+
+const LOG_WARNING_TAXONOMY = {
+  async_stats_panel_missing: { warningCode: "PORTAL_STATS_PANEL_MISSING", source: "stats.syncLessonStatsFromPanel" },
+  portal_drift_detected: { warningCode: "PORTAL_UI_DRIFT", source: "workflow.portal" },
+  training_card_missing_fallback: { warningCode: "TRAINING_CARD_MISSING", source: "course.openCoursePage" },
+  course_link_hidden_fallback: { warningCode: "COURSE_LINK_HIDDEN", source: "course.openCoursePage" },
+  player_controls_timeout: { warningCode: "SCORM_CONTROLS_TIMEOUT", source: "scorm.waitForPlayerReady" },
+  player_mute_button_missing: { warningCode: "SCORM_MUTE_BUTTON_MISSING", source: "scorm.mutePresentation" },
+  player_play_button_missing: { warningCode: "SCORM_PLAY_BUTTON_MISSING", source: "scorm.startPlayback" },
+  player_next_button_missing: { warningCode: "SCORM_NEXT_BUTTON_MISSING", source: "scorm.advancePresentation" },
+  scorm_session_interrupted: { warningCode: "SCORM_SESSION_INTERRUPTED", source: "scorm.exitAttempt" }
+};
+
+function serializeError(error) {
+  if (!error) {
+    return {
+      errorName: "UnknownError",
+      errorMessage: "Unknown error"
+    };
+  }
+
+  const name = String(error.name || "Error");
+  const message = String(error.message || String(error));
+  const stack = typeof error.stack === "string" ? error.stack : null;
+
+  return {
+    errorName: name,
+    errorMessage: message,
+    errorStack: stack
+  };
+}
+
+function logFailure(event, context = {}, error = null) {
+  const mapped = LOG_ERROR_TAXONOMY[event] || {};
+  const payload = {
+    event,
+    errorCode: context.errorCode || mapped.errorCode || "UNKNOWN_ERROR",
+    source: context.source || mapped.source || "unknown",
+    ...context,
+    ...serializeError(error)
+  };
+  appendSessionLog(config.sessionLogPath, payload);
+  console.error(`[${event}]`, payload);
+}
+
+function logWarning(event, context = {}) {
+  const mapped = LOG_WARNING_TAXONOMY[event] || {};
+  const payload = {
+    event,
+    warningCode: context.warningCode || mapped.warningCode || "GENERIC_WARNING",
+    source: context.source || mapped.source || "unknown",
+    ...context
+  };
+  appendSessionLog(config.sessionLogPath, payload);
+  console.warn(`[${event}]`, payload);
+}
+
 function isPageAlive(page) {
   try {
     return Boolean(
@@ -180,11 +246,14 @@ async function ensureAuthenticated(page) {
       try {
         await login(page);
       } catch (error) {
-        appendSessionLog(config.sessionLogPath, {
-          event: "login_attempt_navigation_timeout",
-          attempt,
-          message: error.message
-        });
+        logFailure(
+          "login_attempt_navigation_timeout",
+          {
+            attempt,
+            url: getSafePageUrl(page)
+          },
+          error
+        );
       }
 
       await withRetry(() => page.goto(config.baseUrl, { waitUntil: "domcontentloaded" }), {
@@ -244,12 +313,14 @@ async function ensureAuthenticated(page) {
       console.log(`Authenticated session saved to ${config.storageStatePath}.`);
       return;
     } catch (error) {
-      appendSessionLog(config.sessionLogPath, {
-        event: "auth_attempt_failed",
-        attempt,
-        url: page.url(),
-        message: error.message
-      });
+      logFailure(
+        "auth_attempt_failed",
+        {
+          attempt,
+          url: getSafePageUrl(page)
+        },
+        error
+      );
     }
   }
 
@@ -261,12 +332,8 @@ async function syncLessonStatsFromPanel(page, progressState) {
   const panelVisible = await statsPanel.isVisible().catch(() => false);
 
   if (!panelVisible) {
-    appendSessionLog(config.sessionLogPath, {
-      event: "async_stats_panel_missing",
-      url: page.url()
-    });
-    appendSessionLog(config.sessionLogPath, {
-      event: "portal_drift_detected",
+    logWarning("async_stats_panel_missing", { url: page.url() });
+    logWarning("portal_drift_detected", {
       phase: "stats_panel",
       missingSelectors: ["#asyncStatsPanel"],
       url: page.url()
@@ -365,10 +432,7 @@ async function openCoursePage(page) {
         trainingCard.click()
       ]);
     } else {
-      appendSessionLog(config.sessionLogPath, {
-        event: "training_card_missing_fallback",
-        url: page.url()
-      });
+      logWarning("training_card_missing_fallback", { url: page.url() });
       await page.goto(config.baseUrl, { waitUntil: "domcontentloaded" });
     }
   }
@@ -499,8 +563,7 @@ async function openCoursePage(page) {
   );
 
   if (!openCoursesTarget?.found) {
-    appendSessionLog(config.sessionLogPath, {
-      event: "portal_drift_detected",
+    logWarning("portal_drift_detected", {
       phase: "open_courses_button",
       missingSelectors: openCoursesSelectors,
       url: page.url()
@@ -558,8 +621,7 @@ async function openCoursePage(page) {
       goToCourseLink.click()
     ]);
   } else {
-    appendSessionLog(config.sessionLogPath, {
-      event: "course_link_hidden_fallback",
+    logWarning("course_link_hidden_fallback", {
       reason: "course_link_not_visible",
       url: targetPage.url()
     });
@@ -596,13 +658,15 @@ async function resolveCourseSections(page) {
       timeout: config.timeoutMs
     });
   } catch (error) {
-    appendSessionLog(config.sessionLogPath, {
-      event: "portal_drift_detected",
-      phase: "lesson_section_list",
-      missingSelectors: ["li.section.main"],
-      url: page.url(),
-      message: error.message
-    });
+    logFailure(
+      "portal_drift_detected",
+      {
+        phase: "lesson_section_list",
+        missingSelectors: ["li.section.main"],
+        url: getSafePageUrl(page)
+      },
+      error
+    );
     throw error;
   }
 
@@ -731,13 +795,11 @@ async function waitForPlayerReady(page, targetSection) {
     }
   }
 
-  appendSessionLog(config.sessionLogPath, {
-    event: "player_controls_timeout",
+  logWarning("player_controls_timeout", {
     sectionId: targetSection.id,
     url: page.url()
   });
-  appendSessionLog(config.sessionLogPath, {
-    event: "portal_drift_detected",
+  logWarning("portal_drift_detected", {
     phase: "scorm_controls",
     missingSelectors: [PLAYER_PLAY_SELECTOR, PLAYER_NEXT_SELECTOR, PLAYER_MUTE_SELECTOR],
     sectionId: targetSection.id,
@@ -752,8 +814,7 @@ async function mutePresentation(page, targetSection) {
 
   const muteTarget = await getFrameWithSelector(page, PLAYER_MUTE_SELECTOR);
   if (!muteTarget) {
-    appendSessionLog(config.sessionLogPath, {
-      event: "player_mute_button_missing",
+    logWarning("player_mute_button_missing", {
       sectionId: targetSection.id,
       url: page.url()
     });
@@ -788,8 +849,7 @@ async function startPresentationPlayback(page, targetSection) {
 
   const playTarget = await getFrameWithSelector(page, PLAYER_PLAY_SELECTOR);
   if (!playTarget) {
-    appendSessionLog(config.sessionLogPath, {
-      event: "player_play_button_missing",
+    logWarning("player_play_button_missing", {
       sectionId: targetSection.id,
       url: page.url()
     });
@@ -814,8 +874,7 @@ async function advancePresentation(page, targetSection) {
 
   const nextTarget = await getFrameWithSelector(page, PLAYER_NEXT_SELECTOR);
   if (!nextTarget) {
-    appendSessionLog(config.sessionLogPath, {
-      event: "player_next_button_missing",
+    logWarning("player_next_button_missing", {
       sectionId: targetSection.id,
       url: page.url()
     });
@@ -913,8 +972,7 @@ async function exitScormAttempt(page, targetSection, progressState, sessionMinut
   while (Date.now() < endAt) {
     touchHeartbeat(STEP.PLAYBACK);
     if (!isPageAlive(page)) {
-      appendSessionLog(config.sessionLogPath, {
-        event: "scorm_session_interrupted",
+      logWarning("scorm_session_interrupted", {
         sectionId: targetSection.id,
         reason: "page_closed_during_wait",
         url: getSafePageUrl(page)
@@ -934,8 +992,7 @@ async function exitScormAttempt(page, targetSection, progressState, sessionMinut
     const chunkMs = Math.min(15_000, remainingMs);
     const pageStillAlive = await waitOnLivePage(page, chunkMs);
     if (!pageStillAlive) {
-      appendSessionLog(config.sessionLogPath, {
-        event: "scorm_session_interrupted",
+      logWarning("scorm_session_interrupted", {
         sectionId: targetSection.id,
         reason: "page_closed_during_wait",
         url: getSafePageUrl(page)
@@ -957,8 +1014,7 @@ async function exitScormAttempt(page, targetSection, progressState, sessionMinut
   }
 
   if (!isPageAlive(page)) {
-    appendSessionLog(config.sessionLogPath, {
-      event: "scorm_session_interrupted",
+    logWarning("scorm_session_interrupted", {
       sectionId: targetSection.id,
       reason: "page_closed_before_exit",
       url: getSafePageUrl(page)
@@ -1136,12 +1192,15 @@ async function runWorkflow(page) {
         currentStep: step,
         lastSelectorFailure: error?.message || "step_failed"
       });
-      appendSessionLog(config.sessionLogPath, {
-        event: "supervisor_terminal_failure",
-        step,
-        attempt,
-        message: error?.message || String(error)
-      });
+      logFailure(
+        "supervisor_terminal_failure",
+        {
+          step,
+          attempt,
+          currentUrl: getSafePageUrl(page)
+        },
+        error
+      );
     },
     onRecovery: async ({ step, attempt, recoveryAction, message }) => {
       recoveryAttempts += 1;
@@ -1274,17 +1333,22 @@ async function main() {
   }
 }
 
+process.on("unhandledRejection", (reason) => {
+  const rejectionError =
+    reason instanceof Error ? reason : new Error(typeof reason === "string" ? reason : JSON.stringify(reason));
+  logFailure("unhandled_promise_rejection", {}, rejectionError);
+});
+
+process.on("uncaughtException", (error) => {
+  logFailure("uncaught_exception", {}, error);
+});
+
 main().catch((error) => {
   transitionRuntimeState("error", {
     paused: false,
     nextPlannedExitAt: null
   });
   setLastAction(`Error: ${error.message}`);
-  appendSessionLog(config.sessionLogPath, {
-    event: "workflow_failed",
-    message: error.message
-  });
-  console.error("Automation failed:");
-  console.error(error);
+  logFailure("workflow_failed", { phase: "main" }, error);
   process.exitCode = 1;
 });

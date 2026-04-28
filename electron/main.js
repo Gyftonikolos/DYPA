@@ -378,17 +378,36 @@ function startBotProcess() {
   });
 
   botProcess.stdout.on("data", (chunk) => {
-    appendJsonLine(config.sessionLogPath, {
-      event: "desktop_bot_stdout",
-      message: String(chunk).trim()
-    });
+    const text = String(chunk || "");
+    const lines = text
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+    for (const line of lines) {
+      appendJsonLine(config.sessionLogPath, {
+        event: "desktop_bot_stdout",
+        source: "electron.bot.stdout",
+        errorCode: null,
+        message: line
+      });
+    }
   });
 
   botProcess.stderr.on("data", (chunk) => {
-    appendJsonLine(config.sessionLogPath, {
-      event: "desktop_bot_stderr",
-      message: String(chunk).trim()
-    });
+    const text = String(chunk || "");
+    const lines = text
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+    for (const line of lines) {
+      appendJsonLine(config.sessionLogPath, {
+        event: "desktop_bot_stderr",
+        level: "error",
+        source: "electron.bot.stderr",
+        errorCode: "BOT_STDERR",
+        message: line
+      });
+    }
   });
 
   botProcess.on("exit", (code, signal) => {
@@ -733,6 +752,8 @@ app.whenReady().then(() => {
     if (Number.isFinite(staleMs) && staleMs > 120_000) {
       appendJsonLine(config.sessionLogPath, {
         event: "stale_run_detected",
+        warningCode: "HEARTBEAT_STALE",
+        source: "electron.staleRunMonitor",
         staleMs,
         heartbeatAt
       });
@@ -769,6 +790,8 @@ app.whenReady().then(() => {
       updateRuntimeState({ scheduledRun: skipped });
       appendJsonLine(config.sessionLogPath, {
         event: "schedule_skipped_running",
+        warningCode: "SCHEDULE_SKIPPED_ALREADY_RUNNING",
+        source: "electron.scheduleMonitor",
         scheduledForIso: scheduledRun.scheduledForIso
       });
       return;

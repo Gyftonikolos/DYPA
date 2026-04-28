@@ -4,6 +4,30 @@ const { getRecoveryActionsForStep, getRecoveryBudget } = require("./recoveryPlay
 function createRunSupervisor(deps = {}) {
   const timeline = [];
   const heartbeatByStep = {};
+  const STEP_ERROR_CODES = {
+    AUTH: "SUPERVISOR_AUTH_STEP_FAILED",
+    OPEN_COURSE: "SUPERVISOR_OPEN_COURSE_STEP_FAILED",
+    OPEN_SCORM: "SUPERVISOR_OPEN_SCORM_STEP_FAILED",
+    PLAYBACK: "SUPERVISOR_PLAYBACK_STEP_FAILED"
+  };
+
+  function getStepErrorCode(step) {
+    return STEP_ERROR_CODES[String(step || "").toUpperCase()] || "SUPERVISOR_STEP_FAILED";
+  }
+
+  function serializeError(error) {
+    if (!error) {
+      return {
+        errorName: "UnknownError",
+        errorMessage: "Unknown error"
+      };
+    }
+    return {
+      errorName: String(error.name || "Error"),
+      errorMessage: String(error.message || String(error)),
+      errorStack: typeof error.stack === "string" ? error.stack : null
+    };
+  }
 
   function push(entry) {
     const event = { timestamp: new Date().toISOString(), ...entry };
@@ -34,7 +58,9 @@ function createRunSupervisor(deps = {}) {
           step,
           attempt,
           kind,
-          message: error.message || String(error)
+          errorCode: getStepErrorCode(step),
+          source: "runSupervisor.executeStep",
+          ...serializeError(error)
         });
         if (kind === "fatal" || attempt > budget.maxAttempts) {
           if (typeof deps.onStepFailure === "function") {
@@ -50,7 +76,9 @@ function createRunSupervisor(deps = {}) {
             attempt,
             recoveryAction,
             cooldownMs: budget.cooldownMs,
-            message: error.message || String(error)
+            errorCode: getStepErrorCode(step),
+            source: "runSupervisor.recovery",
+            ...serializeError(error)
           });
         }
         push({
