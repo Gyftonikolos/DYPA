@@ -144,6 +144,43 @@
           </section>
 
           <section class="panel">
+            <div class="panel-label">Scheduler (Daily Windows)</div>
+            <div class="form-grid two-col">
+              <label>Night window start
+                <input id="automationNightStart" type="time" class="field" value="00:00">
+              </label>
+              <label>Night window end
+                <input id="automationNightEnd" type="time" class="field" value="02:00">
+              </label>
+              <label>Evening window start
+                <input id="automationEveningStart" type="time" class="field" value="17:00">
+              </label>
+              <label>Evening window end
+                <input id="automationEveningEnd" type="time" class="field" value="21:00">
+              </label>
+              <label>Night minutes (avg)
+                <input id="automationNightTargetMinutes" type="number" class="field" min="0" step="1" value="120">
+              </label>
+              <label>Random jitter (± min)
+                <input id="automationNightJitterMinutes" type="number" class="field" min="0" step="1" value="15">
+              </label>
+              <label>Daily target minutes
+                <input id="automationDailyLimitMinutes" type="number" class="field" min="0" step="1" placeholder="360">
+              </label>
+              <label class="checkbox-option" style="align-self:end;">
+                <input id="automationSchedulerEnabled" type="checkbox">
+                Enable scheduler
+              </label>
+            </div>
+            <div class="muted small-hint">The bot will run only inside these windows and pause outside them. It will stop when the daily target minutes are reached.</div>
+            <div class="control-row">
+              <button id="automationApplyScheduleBtn" class="control-btn success" type="button">Apply & Enable</button>
+              <button id="automationDisableScheduleBtn" class="control-btn danger" type="button">Disable</button>
+            </div>
+            <div id="automationScheduleFeedback" class="muted small-hint">Scheduler is not enabled.</div>
+          </section>
+
+          <section class="panel">
             <div class="panel-label">Runtime</div>
             <div class="runtime-list">
               <div><strong>Bot URL:</strong> <span id="botUrl" class="mono muted">-</span></div>
@@ -245,6 +282,14 @@
                       spellcheck="false"
                     >
                     <div class="muted">Example: 00:00-02:00,18:00-22:00 (leave empty to run anytime)</div>
+                  </div>
+                </div>
+                <div class="panel-subrow">
+                  <span class="muted">Night budget randomizer</span>
+                  <div class="preset-row">
+                    <input id="settingsNightTargetMinutes" class="field profile-name-field" type="number" min="0" step="1" placeholder="120" aria-label="Night minutes average">
+                    <input id="settingsNightJitterMinutes" class="field profile-name-field" type="number" min="0" step="1" placeholder="15" aria-label="Night minutes jitter">
+                    <div class="muted">Example: avg 120, jitter 15 → random nightly target between 105–135 minutes</div>
                   </div>
                 </div>
                 <div class="form-grid two-col">

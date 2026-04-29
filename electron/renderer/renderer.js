@@ -944,6 +944,101 @@ async function handleCancelScheduledRun() {
   await refreshDashboard();
 }
 
+function setAutomationScheduleFeedback(message, isError = false) {
+  const el = document.getElementById("automationScheduleFeedback");
+  if (!el) return;
+  el.textContent = message;
+  el.classList.toggle("schedule-hint-danger", Boolean(isError));
+  el.classList.toggle("schedule-hint-neutral", !isError);
+}
+
+function buildAllowedWindowsCsvFromAutomationInputs() {
+  const nightStart = String(document.getElementById("automationNightStart")?.value || "").trim();
+  const nightEnd = String(document.getElementById("automationNightEnd")?.value || "").trim();
+  const eveningStart = String(document.getElementById("automationEveningStart")?.value || "").trim();
+  const eveningEnd = String(document.getElementById("automationEveningEnd")?.value || "").trim();
+  const tokens = [];
+  if (nightStart && nightEnd) tokens.push(`${nightStart}-${nightEnd}`);
+  if (eveningStart && eveningEnd) tokens.push(`${eveningStart}-${eveningEnd}`);
+  return {
+    allowedWindowsCsv: tokens.join(","),
+    runAtLocalTime: nightStart || eveningStart || "00:00"
+  };
+}
+
+async function handleApplyAutomationSchedule() {
+  const enabled = Boolean(document.getElementById("automationSchedulerEnabled")?.checked);
+  if (!enabled) {
+    setAutomationScheduleFeedback("Enable the checkbox first, then click Apply & Enable.", true);
+    return;
+  }
+
+  const { allowedWindowsCsv, runAtLocalTime } = buildAllowedWindowsCsvFromAutomationInputs();
+  const dailyLimit = Number(document.getElementById("automationDailyLimitMinutes")?.value || 0);
+  const nightTargetMinutes = Number(document.getElementById("automationNightTargetMinutes")?.value || 0);
+  const nightJitterMinutes = Number(document.getElementById("automationNightJitterMinutes")?.value || 0);
+
+  // Keep Settings tab and Automation tab in sync by writing into settings inputs,
+  // then reusing the existing save pipeline.
+  const windowsInput = document.getElementById("settingsAllowedWindowsCsv");
+  if (windowsInput) windowsInput.value = allowedWindowsCsv;
+  const dailyLimitInput = document.getElementById("settingsDailyLimitMinutes");
+  if (dailyLimitInput && Number.isFinite(dailyLimit) && dailyLimit >= 0) {
+    dailyLimitInput.value = String(dailyLimit);
+  }
+  const defaultRunAt = document.getElementById("settingsDefaultRunAtTime");
+  if (defaultRunAt) {
+    defaultRunAt.value = runAtLocalTime;
+  }
+  const nightTargetInput = document.getElementById("settingsNightTargetMinutes");
+  if (nightTargetInput && Number.isFinite(nightTargetMinutes) && nightTargetMinutes >= 0) {
+    nightTargetInput.value = String(nightTargetMinutes);
+  }
+  const nightJitterInput = document.getElementById("settingsNightJitterMinutes");
+  if (nightJitterInput && Number.isFinite(nightJitterMinutes) && nightJitterMinutes >= 0) {
+    nightJitterInput.value = String(nightJitterMinutes);
+  }
+
+  const saved = await handleSaveSettings().catch(() => null);
+  if (saved === null) {
+    // handleSaveSettings already reports errors to Settings feedback; mirror a short hint here.
+    setAutomationScheduleFeedback("Could not save settings. Open Settings tab for details.", true);
+    return;
+  }
+
+  const scheduleResponse = await window.desktopApi.setScheduledRun({ runAtLocalTime }).catch(() => null);
+  if (!scheduleResponse?.ok) {
+    setAutomationScheduleFeedback(
+      scheduleResponse?.reason === "already_scheduled"
+        ? "A scheduled run is already pending. Disable it first."
+        : "Could not enable scheduler (invalid time).",
+      true
+    );
+    return;
+  }
+
+  setAutomationScheduleFeedback(
+    scheduleResponse?.scheduledRun?.scheduledForIso
+      ? `Enabled. Next run: ${fmtDate(scheduleResponse.scheduledRun.scheduledForIso)}`
+      : "Enabled."
+  );
+  await refreshDashboard();
+}
+
+async function handleDisableAutomationSchedule() {
+  document.getElementById("automationSchedulerEnabled")?.setAttribute("disabled", "disabled");
+  const response = await window.desktopApi.clearScheduledRun().catch(() => null);
+  document.getElementById("automationSchedulerEnabled")?.removeAttribute("disabled");
+  if (!response?.ok) {
+    setAutomationScheduleFeedback("Could not disable scheduler.", true);
+    return;
+  }
+  const checkbox = document.getElementById("automationSchedulerEnabled");
+  if (checkbox) checkbox.checked = false;
+  setAutomationScheduleFeedback("Scheduler disabled.");
+  await refreshDashboard();
+}
+
 async function maybeHandleScheduledTrigger(state) {
   const scheduledRun = state?.scheduledRun || {};
   if (scheduledRun.status !== "triggered_pending_ui" || !scheduledRun.triggerToken) {
@@ -984,6 +1079,16 @@ async function refreshDashboard() {
   if (hasErrorLog) {
     maybeNotify("Recent automation error detected. Check Run Health and Logs.", "errors");
   }
+
+  // Keep scheduler panel feedback roughly in sync.
+  const automationEnabled = Boolean(document.getElementById("automationSchedulerEnabled")?.checked);
+  if (!automationEnabled) {
+    setAutomationScheduleFeedback(
+      state?.scheduledRun?.enabled && state?.scheduledRun?.scheduledForIso
+        ? `Enabled. Next run: ${fmtDate(state.scheduledRun.scheduledForIso)}`
+        : "Scheduler is not enabled."
+    );
+  }
 }
 
 function getSettingsFromForm() {
@@ -1011,7 +1116,9 @@ function getSettingsFromForm() {
     },
     scheduler: {
       defaultRunAtLocalTime: String(document.getElementById("settingsDefaultRunAtTime")?.value || "17:40"),
-      allowedWindowsCsv: String(document.getElementById("settingsAllowedWindowsCsv")?.value || "").trim()
+      allowedWindowsCsv: String(document.getElementById("settingsAllowedWindowsCsv")?.value || "").trim(),
+      nightTargetMinutes: Number(document.getElementById("settingsNightTargetMinutes")?.value || 0) || 0,
+      nightJitterMinutes: Number(document.getElementById("settingsNightJitterMinutes")?.value || 0) || 0
     },
     credentials: {
       username: document.getElementById("settingsUsername").value.trim(),
@@ -1600,6 +1707,54 @@ function fillSettingsForm(settings) {
   if (allowedWindowsInput) {
     allowedWindowsInput.value = settings.scheduler?.allowedWindowsCsv || "";
   }
+  const nightTargetInput = document.getElementById("settingsNightTargetMinutes");
+  if (nightTargetInput) {
+    nightTargetInput.value = settings.scheduler?.nightTargetMinutes ?? "";
+  }
+  const nightJitterInput = document.getElementById("settingsNightJitterMinutes");
+  if (nightJitterInput) {
+    nightJitterInput.value = settings.scheduler?.nightJitterMinutes ?? "";
+  }
+
+  // Mirror scheduler settings onto the Automation tab panel.
+  const dailyLimitMirror = document.getElementById("automationDailyLimitMinutes");
+  if (dailyLimitMirror) {
+    dailyLimitMirror.value = settings.dailyScormLimitMinutes ?? "";
+  }
+  const windowsCsv = String(settings.scheduler?.allowedWindowsCsv || "").trim();
+  const windows = windowsCsv
+    ? windowsCsv
+        .split(",")
+        .map((token) => token.trim())
+        .filter(Boolean)
+        .slice(0, 2)
+    : [];
+  const [night, evening] = windows;
+  const [nightStart, nightEnd] = night ? night.split("-").map((v) => v.trim()) : ["00:00", "02:00"];
+  const [eveningStart, eveningEnd] = evening ? evening.split("-").map((v) => v.trim()) : ["17:00", "21:00"];
+  const nightStartEl = document.getElementById("automationNightStart");
+  const nightEndEl = document.getElementById("automationNightEnd");
+  const eveningStartEl = document.getElementById("automationEveningStart");
+  const eveningEndEl = document.getElementById("automationEveningEnd");
+  if (nightStartEl && nightStart) nightStartEl.value = nightStart;
+  if (nightEndEl && nightEnd) nightEndEl.value = nightEnd;
+  if (eveningStartEl && eveningStart) eveningStartEl.value = eveningStart;
+  if (eveningEndEl && eveningEnd) eveningEndEl.value = eveningEnd;
+  const automationNightTarget = document.getElementById("automationNightTargetMinutes");
+  if (automationNightTarget) {
+    const fallback = Number.isFinite(Number(settings.scheduler?.nightTargetMinutes))
+      ? Number(settings.scheduler?.nightTargetMinutes)
+      : 120;
+    automationNightTarget.value = String(fallback);
+  }
+  const automationNightJitter = document.getElementById("automationNightJitterMinutes");
+  if (automationNightJitter) {
+    const fallback = Number.isFinite(Number(settings.scheduler?.nightJitterMinutes))
+      ? Number(settings.scheduler?.nightJitterMinutes)
+      : 15;
+    automationNightJitter.value = String(fallback);
+  }
+
   updateRiskBadges();
   renderSettingsPreview();
   applyUiPreferences(settings);
@@ -1818,12 +1973,12 @@ async function handleSaveSettings() {
   const candidate = getSettingsFromForm();
   if (candidate.scormSessionMinMinutes > candidate.scormSessionMaxMinutes) {
     setSettingsFeedback("Minimum Minutes must be less than or equal to Maximum Minutes.", true);
-    return;
+    return null;
   }
   const result = await window.desktopApi.saveSettings(candidate);
   if (!result.ok) {
     setSettingsFeedback((result.errors || ["Failed to save settings."]).join(" "), true);
-    return;
+    return null;
   }
 
   currentSettings = result.settings;
@@ -3155,6 +3310,8 @@ async function applyIncrementalSessionProgress(progressState, targetSection, ses
       date: todayKey,
       completedMinutes: 0
     };
+
+  return result;
   }
   const applied = applyLedgerCheckpoint(progressState, sessionId, checkpointKey, () => {
     progressState.dailyProgress.completedMinutes += minutes;
@@ -3703,6 +3860,106 @@ async function openTrainingAndCourse() {
 }
 
 async function runEmbeddedAutomation() {
+  function isValidTimeToken(value) {
+    return /^([01]\d|2[0-3]):([0-5]\d)$/.test(String(value || ""));
+  }
+  function parseTimeToMinutes(value) {
+    const [h, m] = String(value).split(":").map(Number);
+    return h * 60 + m;
+  }
+  function parseScheduleWindowsCsv(csvValue) {
+    const csv = String(csvValue || "").trim();
+    if (!csv) return { windows: [], errors: [] };
+    const tokens = csv
+      .split(",")
+      .map((token) => token.trim())
+      .filter(Boolean);
+    const windows = [];
+    const errors = [];
+    for (const token of tokens) {
+      const parts = token.split("-").map((part) => part.trim());
+      if (parts.length !== 2) {
+        errors.push(`Invalid window "${token}" (expected HH:mm-HH:mm)`);
+        continue;
+      }
+      const [start, end] = parts;
+      if (!isValidTimeToken(start) || !isValidTimeToken(end)) {
+        errors.push(`Invalid window "${token}" (expected HH:mm-HH:mm)`);
+        continue;
+      }
+      const startMinutes = parseTimeToMinutes(start);
+      const endMinutes = parseTimeToMinutes(end);
+      windows.push({
+        start,
+        end,
+        startMinutes,
+        endMinutes,
+        wrapsMidnight: endMinutes <= startMinutes
+      });
+    }
+    windows.sort((a, b) => a.startMinutes - b.startMinutes);
+    return { windows, errors };
+  }
+  function getMinutesSinceMidnight(date = new Date()) {
+    return date.getHours() * 60 + date.getMinutes();
+  }
+  function isNowWithinAnyWindow(windows, now = new Date()) {
+    if (!Array.isArray(windows) || windows.length === 0) {
+      return { within: true, activeWindow: null };
+    }
+    const minutes = getMinutesSinceMidnight(now);
+    for (const window of windows) {
+      if (!window.wrapsMidnight) {
+        if (minutes >= window.startMinutes && minutes < window.endMinutes) {
+          return { within: true, activeWindow: window };
+        }
+        continue;
+      }
+      if (minutes >= window.startMinutes || minutes < window.endMinutes) {
+        return { within: true, activeWindow: window };
+      }
+    }
+    return { within: false, activeWindow: null };
+  }
+  function computeNextWindowStart(windows, now = new Date()) {
+    if (!Array.isArray(windows) || windows.length === 0) {
+      return null;
+    }
+    const minutes = getMinutesSinceMidnight(now);
+    const today = new Date(now);
+    today.setSeconds(0, 0);
+    const startsToday = windows
+      .map((w) => w.startMinutes)
+      .sort((a, b) => a - b)
+      .map((startMinutes) => {
+        const startAt = new Date(today);
+        startAt.setHours(Math.floor(startMinutes / 60), startMinutes % 60, 0, 0);
+        return startAt;
+      });
+    for (const startAt of startsToday) {
+      const startMinutes = startAt.getHours() * 60 + startAt.getMinutes();
+      if (startMinutes > minutes) {
+        return startAt;
+      }
+    }
+    const first = startsToday[0];
+    if (!first) return null;
+    const next = new Date(first);
+    next.setDate(next.getDate() + 1);
+    return next;
+  }
+  function minutesUntilWindowEnd(activeWindow, now = new Date()) {
+    if (!activeWindow) return null;
+    const minutes = getMinutesSinceMidnight(now);
+    if (!activeWindow.wrapsMidnight) {
+      return Math.max(0, activeWindow.endMinutes - minutes);
+    }
+    if (minutes >= activeWindow.startMinutes) {
+      return Math.max(0, 24 * 60 - minutes + activeWindow.endMinutes);
+    }
+    return Math.max(0, activeWindow.endMinutes - minutes);
+  }
+
   await waitForWebviewReady();
   const progressState = ensureProgressShape(await window.desktopApi.getProgressState());
   await saveProgressStateSafe(progressState);
@@ -3711,6 +3968,46 @@ async function runEmbeddedAutomation() {
     configLike: appConfig
   });
   const dailyLimitMinutes = progressState.dailyScormLimitMinutes || appConfig.dailyScormLimitMinutes;
+  const scheduleWindowsCsv = String(currentSettings?.scheduler?.allowedWindowsCsv || "").trim();
+  const scheduleWindows = parseScheduleWindowsCsv(scheduleWindowsCsv).windows || [];
+  const nightTargetBaseMinutes = Math.max(0, Number(currentSettings?.scheduler?.nightTargetMinutes || 0) || 0);
+  const nightJitterMinutes = Math.max(0, Number(currentSettings?.scheduler?.nightJitterMinutes || 0) || 0);
+
+  const resolveActiveWindowIndex = (activeWindow) => {
+    if (!activeWindow) return -1;
+    return scheduleWindows.findIndex(
+      (w) =>
+        Number(w.startMinutes) === Number(activeWindow.startMinutes) &&
+        Number(w.endMinutes) === Number(activeWindow.endMinutes)
+    );
+  };
+
+  const todayKey = getAthensDayKey();
+  if (!progressState.schedulerDailySplit || progressState.schedulerDailySplit.date !== todayKey) {
+    const plannedNightMinutes =
+      nightTargetBaseMinutes > 0
+        ? Math.max(
+            0,
+            Math.min(
+              dailyLimitMinutes,
+              randomIntInRange(nightTargetBaseMinutes - nightJitterMinutes, nightTargetBaseMinutes + nightJitterMinutes)
+            )
+          )
+        : 0;
+    progressState.schedulerDailySplit = {
+      date: todayKey,
+      plannedNightMinutes,
+      nightMinutes: 0,
+      eveningMinutes: 0
+    };
+    await saveProgressStateSafe(progressState);
+    await appendLog("schedule_randomized_night_budget", {
+      date: todayKey,
+      plannedNightMinutes,
+      nightTargetBaseMinutes,
+      nightJitterMinutes
+    });
+  }
 
   embeddedAutomation.running = true;
   embeddedAutomation.stopRequested = false;
@@ -3760,6 +4057,40 @@ async function runEmbeddedAutomation() {
           todayMinutes: progressState.dailyProgress.completedMinutes
         }, "Daily limit reached");
         return;
+      }
+
+      const windowCheck = isNowWithinAnyWindow(scheduleWindows);
+      if (!windowCheck.within) {
+        const nextStart = computeNextWindowStart(scheduleWindows);
+        const nextStartIso = nextStart ? nextStart.toISOString() : null;
+        await updateRuntimeState(
+          {
+            status: "paused",
+            paused: true,
+            nextPlannedExitAt: nextStartIso,
+            currentUrl: getSafeWebviewUrl() || null
+          },
+          "Waiting for scheduled window to open"
+        );
+        await appendLog("schedule_window_waiting", {
+          nextWindowStartIso: nextStartIso
+        });
+
+        while (!embeddedAutomation.stopRequested && !isNowWithinAnyWindow(scheduleWindows).within) {
+          const next = computeNextWindowStart(scheduleWindows);
+          const wakeMs = next ? Math.max(5_000, Math.min(60_000, next.getTime() - Date.now())) : 60_000;
+          await delay(wakeMs);
+        }
+
+        await updateRuntimeState(
+          {
+            status: "running",
+            paused: false,
+            currentUrl: getSafeWebviewUrl() || null
+          },
+          "Scheduled window open; resuming run"
+        );
+        await appendLog("schedule_window_resumed", {});
       }
 
       await openTrainingAndCourse();
@@ -3880,9 +4211,60 @@ async function runEmbeddedAutomation() {
         }, "Daily limit reached");
         return;
       }
+      const activeWindow = isNowWithinAnyWindow(scheduleWindows).activeWindow;
+      const activeWindowIndex = resolveActiveWindowIndex(activeWindow);
+      const windowRemaining = minutesUntilWindowEnd(activeWindow);
+      const effectiveRemainingMinutes =
+        windowRemaining === null ? remainingMinutes : Math.max(0, Math.min(remainingMinutes, windowRemaining));
+      if (effectiveRemainingMinutes <= 0) {
+        continue;
+      }
+
+      // If we're in the first window (night) and already hit the randomized night budget, wait until next window.
+      const split = progressState.schedulerDailySplit;
+      if (
+        activeWindowIndex === 0 &&
+        split &&
+        Number.isFinite(Number(split.plannedNightMinutes)) &&
+        Number.isFinite(Number(split.nightMinutes)) &&
+        Number(split.plannedNightMinutes) > 0 &&
+        Number(split.nightMinutes) >= Number(split.plannedNightMinutes)
+      ) {
+        const nextStart = computeNextWindowStart(scheduleWindows);
+        const nextStartIso = nextStart ? nextStart.toISOString() : null;
+        await appendLog("schedule_night_budget_reached", {
+          plannedNightMinutes: split.plannedNightMinutes,
+          nightMinutes: split.nightMinutes,
+          nextWindowStartIso: nextStartIso
+        });
+        await updateRuntimeState(
+          {
+            status: "paused",
+            paused: true,
+            nextPlannedExitAt: nextStartIso,
+            currentUrl: getSafeWebviewUrl() || null
+          },
+          "Night budget reached; waiting for next window"
+        );
+        while (!embeddedAutomation.stopRequested && !isNowWithinAnyWindow(scheduleWindows).within) {
+          const next = computeNextWindowStart(scheduleWindows);
+          const wakeMs = next ? Math.max(5_000, Math.min(60_000, next.getTime() - Date.now())) : 60_000;
+          await delay(wakeMs);
+        }
+        await updateRuntimeState(
+          {
+            status: "running",
+            paused: false,
+            currentUrl: getSafeWebviewUrl() || null
+          },
+          "Resuming in next window"
+        );
+        continue;
+      }
+
       const sessionMinutes = await window.desktopApi.pickSessionMinutes({
         range: sessionRange,
-        remainingMinutes
+        remainingMinutes: effectiveRemainingMinutes
       });
       const plannedExitAt = new Date(Date.now() + sessionMinutes * 60 * 1000).toISOString();
       await appendLog("scorm_session_started", {
@@ -3911,6 +4293,17 @@ async function runEmbeddedAutomation() {
           `minute-${persistedSessionMinutes + 1}`,
           1
         );
+        const split = progressState.schedulerDailySplit;
+        if (split && split.date === getAthensDayKey()) {
+          const activeWindow = isNowWithinAnyWindow(scheduleWindows).activeWindow;
+          const idx = resolveActiveWindowIndex(activeWindow);
+          if (idx === 0) {
+            split.nightMinutes = Number(split.nightMinutes || 0) + 1;
+          } else if (idx === 1) {
+            split.eveningMinutes = Number(split.eveningMinutes || 0) + 1;
+          }
+          await saveProgressStateSafe(progressState);
+        }
         persistedSessionMinutes += 1;
       };
       const sessionOutcome = await advanceSlidesUntil(Date.now() + sessionMinutes * 60 * 1000, persistOneMinute);
@@ -4264,6 +4657,8 @@ async function boot() {
   document.getElementById("quickExportBundleBtn").addEventListener("click", exportSupportBundle);
   document.getElementById("runAtTimeBtn").addEventListener("click", handleRunAtTime);
   document.getElementById("cancelScheduledRunBtn").addEventListener("click", handleCancelScheduledRun);
+  document.getElementById("automationApplyScheduleBtn")?.addEventListener("click", handleApplyAutomationSchedule);
+  document.getElementById("automationDisableScheduleBtn")?.addEventListener("click", handleDisableAutomationSchedule);
   document.getElementById("saveProfileBtn").addEventListener("click", saveCurrentProfile);
   document.getElementById("applyProfileBtn").addEventListener("click", applySavedProfile);
   document.getElementById("dismissOnboardingBtn").addEventListener("click", dismissOnboarding);

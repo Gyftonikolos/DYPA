@@ -41,7 +41,9 @@ const DEFAULT_SETTINGS = {
   },
   scheduler: {
     defaultRunAtLocalTime: "17:40",
-    allowedWindowsCsv: ""
+    allowedWindowsCsv: "",
+    nightTargetMinutes: 120,
+    nightJitterMinutes: 15
   },
   credentials: {
     username: "",
@@ -176,6 +178,12 @@ function migrateRawSettings(rawInput) {
     }
     if (!Object.hasOwn(migrated.config.scheduler, "allowedWindowsCsv")) {
       migrated.config.scheduler.allowedWindowsCsv = "";
+    }
+    if (!Object.hasOwn(migrated.config.scheduler, "nightTargetMinutes")) {
+      migrated.config.scheduler.nightTargetMinutes = 120;
+    }
+    if (!Object.hasOwn(migrated.config.scheduler, "nightJitterMinutes")) {
+      migrated.config.scheduler.nightJitterMinutes = 15;
     }
     migrated.version = 5;
   }
