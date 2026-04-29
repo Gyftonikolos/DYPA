@@ -54,6 +54,16 @@ function isValidRunAtLocalTime(value) {
   return /^([01]\d|2[0-3]):([0-5]\d)$/.test(String(value || ""));
 }
 
+function normalizeRunAtLocalTime(value) {
+  const raw = String(value || "").trim();
+  // Some browsers/electron builds emit HH:mm:ss for <input type="time">.
+  const hhmmss = raw.match(/^([01]\d|2[0-3]):([0-5]\d):([0-5]\d)$/);
+  if (hhmmss) {
+    return `${hhmmss[1]}:${hhmmss[2]}`;
+  }
+  return raw;
+}
+
 function computeNextOccurrenceIso(runAtLocalTime) {
   const [h, m] = String(runAtLocalTime).split(":").map((v) => Number(v));
   const now = new Date();
@@ -66,7 +76,7 @@ function computeNextOccurrenceIso(runAtLocalTime) {
 }
 
 function computeNextScheduledForIso({ runAtLocalTime, allowedWindowsCsv = "" }, fromDate = new Date()) {
-  const normalizedTime = String(runAtLocalTime || "").trim();
+  const normalizedTime = normalizeRunAtLocalTime(runAtLocalTime);
   if (!isValidRunAtLocalTime(normalizedTime)) {
     return null;
   }
@@ -685,7 +695,9 @@ app.whenReady().then(() => {
   });
   ipcMain.handle("schedule:set-next-run", async (_event, payload) => {
     const settings = getMergedSettingsForUi();
-    const runAtLocalTime = String(payload?.runAtLocalTime || settings.scheduler?.defaultRunAtLocalTime || "").trim();
+    const runAtLocalTime = normalizeRunAtLocalTime(
+      payload?.runAtLocalTime || settings.scheduler?.defaultRunAtLocalTime || ""
+    );
     if (!isValidRunAtLocalTime(runAtLocalTime)) {
       return { ok: false, reason: "invalid_time_format" };
     }

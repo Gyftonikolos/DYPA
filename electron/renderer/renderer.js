@@ -953,16 +953,25 @@ function setAutomationScheduleFeedback(message, isError = false) {
 }
 
 function buildAllowedWindowsCsvFromAutomationInputs() {
+  const normalizeTime = (value) => {
+    const raw = String(value || "").trim();
+    const hhmmss = raw.match(/^([01]\d|2[0-3]):([0-5]\d):([0-5]\d)$/);
+    return hhmmss ? `${hhmmss[1]}:${hhmmss[2]}` : raw;
+  };
   const nightStart = String(document.getElementById("automationNightStart")?.value || "").trim();
   const nightEnd = String(document.getElementById("automationNightEnd")?.value || "").trim();
   const eveningStart = String(document.getElementById("automationEveningStart")?.value || "").trim();
   const eveningEnd = String(document.getElementById("automationEveningEnd")?.value || "").trim();
   const tokens = [];
-  if (nightStart && nightEnd) tokens.push(`${nightStart}-${nightEnd}`);
-  if (eveningStart && eveningEnd) tokens.push(`${eveningStart}-${eveningEnd}`);
+  const nStart = normalizeTime(nightStart);
+  const nEnd = normalizeTime(nightEnd);
+  const eStart = normalizeTime(eveningStart);
+  const eEnd = normalizeTime(eveningEnd);
+  if (nStart && nEnd) tokens.push(`${nStart}-${nEnd}`);
+  if (eStart && eEnd) tokens.push(`${eStart}-${eEnd}`);
   return {
     allowedWindowsCsv: tokens.join(","),
-    runAtLocalTime: nightStart || eveningStart || "00:00"
+    runAtLocalTime: nStart || eStart || "00:00"
   };
 }
 
