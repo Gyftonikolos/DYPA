@@ -1,5 +1,6 @@
 require("dotenv").config();
 const { loadSettings } = require("./settingsStore");
+const { parseScheduleWindowsCsv } = require("./scheduleWindows");
 
 function parseBoolean(value, fallback = false) {
   if (value === undefined || value === null || value === "") {
@@ -20,6 +21,9 @@ function parseNumber(value, fallback) {
 module.exports = {
   ...(() => {
     const persisted = loadSettings();
+    const scheduleWindowsCsv =
+      String(persisted.scheduler?.allowedWindowsCsv || process.env.SCHEDULE_WINDOWS || "").trim();
+    const scheduleWindowsParsed = parseScheduleWindowsCsv(scheduleWindowsCsv);
     return {
       baseUrl: persisted.baseUrl || process.env.BASE_URL || "https://edu.golearn.gr/training/trainee/training",
       loginUrl:
@@ -51,6 +55,10 @@ module.exports = {
       progressStatePath: persisted.progressStatePath || process.env.PROGRESS_STATE_PATH || "progress-state.json",
       sessionLogPath: persisted.sessionLogPath || process.env.SESSION_LOG_PATH || "session-log.jsonl",
       runtimeStatePath: persisted.runtimeStatePath || process.env.RUNTIME_STATE_PATH || "runtime-state.json",
+      scheduleWindowsCsv,
+      scheduleWindows: scheduleWindowsParsed.windows,
+      scheduleWindowsErrors: scheduleWindowsParsed.errors,
+      forceScormModuleId: String(process.env.FORCE_SCORM_ID || "").trim() || null,
       credentials: {
         username: persisted.credentials?.username || process.env.GOLEARN_USERNAME || "",
         password: persisted.credentials?.password || process.env.GOLEARN_PASSWORD || ""

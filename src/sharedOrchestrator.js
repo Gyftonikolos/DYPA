@@ -1,9 +1,17 @@
 function toLessonCandidate(section, progressState) {
+  const sectionId = section?.id;
+  const progressEntry = sectionId ? progressState?.lessonProgress?.[sectionId] : null;
+  const targetHoursFromProgress = Number(progressEntry?.targetHours);
+  const targetHoursFromConfig = Number(section?.targetHours);
+  const resolvedTargetHours =
+    Number.isFinite(targetHoursFromProgress) && targetHoursFromProgress > 0
+      ? targetHoursFromProgress
+      : targetHoursFromConfig;
   return {
-    id: section.id,
+    id: sectionId,
     lessonKey: section.lessonKey,
-    completedMinutes: Number(progressState?.lessonProgress?.[section.id]?.completedMinutes || 0),
-    targetMinutes: Number(section.targetHours || 0) * 60
+    completedMinutes: Number(progressEntry?.completedMinutes || 0),
+    targetMinutes: Number(resolvedTargetHours || 0) * 60
   };
 }
 

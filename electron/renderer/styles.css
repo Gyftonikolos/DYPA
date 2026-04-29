@@ -237,6 +237,7 @@ body {
 .lesson-card .top { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
 .bar { height: 8px; border-radius: 999px; background: var(--soft-surface-bg); margin-top: 8px; overflow: hidden; }
 .bar > span { height: 100%; display: block; background: linear-gradient(90deg, var(--accent), #5d9bff); }
+.test-card .bar > span { background: linear-gradient(90deg, #b08cff, #ff7aa2); }
 
 .logs { display: grid; gap: 8px; max-height: 520px; overflow: auto; }
 .log { border: 1px solid var(--line); border-radius: 10px; padding: 10px; background: var(--soft-surface-bg); }

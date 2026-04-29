@@ -14,6 +14,7 @@ const {
   saveSettings,
   sanitizeForRenderer
 } = require("../src/settingsStore");
+const { parseScheduleWindowsCsv } = require("../src/scheduleWindows");
 
 let botProcess = null;
 let staleRunMonitor = null;
@@ -32,6 +33,7 @@ function sanitizeRuntimePatch(patch) {
     "todayMinutes",
     "dailyLimitMinutes",
     "lessonTotals",
+    "testTotals",
     "runtimeDiagnostics",
     "supervisorTimeline",
     "scheduledRun"
@@ -113,6 +115,10 @@ function readRecentLogs(filePath, limit = 40) {
 function getDashboardPayload() {
   const runtimeState = readJsonFile(config.runtimeStatePath, {});
   const progressState = readJsonFile(config.progressStatePath, {});
+  const runtimeLessonTotals = runtimeState.lessonTotals || {};
+  const runtimeLessonTargets = Object.values(runtimeLessonTotals).map((item) => Number(item?.targetHours || 0));
+  const runtimeLessonTotalsSuspicious =
+    runtimeLessonTargets.length > 0 && runtimeLessonTargets.every((value) => Number.isFinite(value) && value > 0 && value <= 0.25);
 
   return {
     ...runtimeState,
@@ -123,9 +129,10 @@ function getDashboardPayload() {
       runtimeState.dailyLimitMinutes ??
       config.dailyScormLimitMinutes,
     lessonTotals:
-      Object.keys(runtimeState.lessonTotals || {}).length > 0
-        ? runtimeState.lessonTotals
+      Object.keys(runtimeLessonTotals).length > 0 && !runtimeLessonTotalsSuspicious
+        ? runtimeLessonTotals
         : progressState.lessonProgress || {},
+    testTotals: Array.isArray(runtimeState.testTotals) ? runtimeState.testTotals : [],
     currentLesson:
       runtimeState.currentLesson || progressState.lastResolvedSectionId || null,
     processRunning: Boolean(runtimeState.processRunning ?? botProcess)
@@ -315,6 +322,13 @@ function testSettingsPayload(settings) {
   const defaultRunAtLocalTime = String(settings.scheduler?.defaultRunAtLocalTime || "");
   if (defaultRunAtLocalTime && !isValidRunAtLocalTime(defaultRunAtLocalTime)) {
     errors.push("scheduler.defaultRunAtLocalTime must follow HH:mm (24-hour) format.");
+  }
+  const allowedWindowsCsv = String(settings.scheduler?.allowedWindowsCsv || "").trim();
+  if (allowedWindowsCsv) {
+    const parsed = parseScheduleWindowsCsv(allowedWindowsCsv);
+    if (parsed.errors.length > 0) {
+      errors.push(`scheduler.allowedWindowsCsv invalid: ${parsed.errors.join("; ")}`);
+    }
   }
 
   return {

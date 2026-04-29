@@ -175,7 +175,9 @@ const embeddedAutomation = {
   webviewReady: false,
   webviewReadyPromise: null,
   webviewReadyResolver: null,
-  webviewReadyRejector: null
+  webviewReadyRejector: null,
+  navigationChain: Promise.resolve(),
+  lastRequestedUrl: null
 };
 const runtimeDiagnostics = {
   currentStep: "-",
@@ -708,6 +710,34 @@ function renderState(state, analytics = null) {
     lessonTotalsRoot.appendChild(card);
   }
 
+  const testTotalsRoot = document.getElementById("testTotals");
+  if (testTotalsRoot) {
+    testTotalsRoot.innerHTML = "";
+    const tests = Array.isArray(state.testTotals) ? state.testTotals : [];
+    for (const test of tests) {
+      const completedMinutes = Number(test.completedMinutes || 0);
+      const targetMinutes = Number(test.targetMinutes || 0);
+      const percent = targetMinutes > 0 ? Math.min(100, (completedMinutes / targetMinutes) * 100) : 0;
+      const card = document.createElement("div");
+      card.className = "lesson-card test-card";
+      card.innerHTML = `
+        <div class="top">
+          <strong>${String(test.title || "").trim() || "Test"}</strong>
+          <span class="muted">${Math.round((targetMinutes / 60) * 100) / 100}h target</span>
+        </div>
+        <div class="muted">${completedMinutes} / ${targetMinutes} min</div>
+        <div class="bar"><span style="width:${percent}%"></span></div>
+      `;
+      testTotalsRoot.appendChild(card);
+    }
+    if (tests.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "muted";
+      empty.textContent = "No tests found in async stats panel.";
+      testTotalsRoot.appendChild(empty);
+    }
+  }
+
   renderAnalytics(state, analytics);
 }
 
@@ -980,7 +1010,8 @@ function getSettingsFromForm() {
       }
     },
     scheduler: {
-      defaultRunAtLocalTime: String(document.getElementById("settingsDefaultRunAtTime")?.value || "17:40")
+      defaultRunAtLocalTime: String(document.getElementById("settingsDefaultRunAtTime")?.value || "17:40"),
+      allowedWindowsCsv: String(document.getElementById("settingsAllowedWindowsCsv")?.value || "").trim()
     },
     credentials: {
       username: document.getElementById("settingsUsername").value.trim(),
@@ -1564,6 +1595,10 @@ function fillSettingsForm(settings) {
   const defaultRunAtTimeInput = document.getElementById("settingsDefaultRunAtTime");
   if (defaultRunAtTimeInput) {
     defaultRunAtTimeInput.value = settings.scheduler?.defaultRunAtLocalTime || "17:40";
+  }
+  const allowedWindowsInput = document.getElementById("settingsAllowedWindowsCsv");
+  if (allowedWindowsInput) {
+    allowedWindowsInput.value = settings.scheduler?.allowedWindowsCsv || "";
   }
   updateRiskBadges();
   renderSettingsPreview();
@@ -2790,7 +2825,16 @@ async function ensureTrainingPageLoaded() {
 async function readWebsiteStatsPanel() {
   return executeInWebview(`
     (() => {
-      const panel = document.querySelector("#asyncStatsPanel");
+      let panel = document.querySelector("#asyncStatsPanel");
+      if (!panel) {
+        const toggle = document.querySelector(
+          'button.accordion-button[data-bs-target="#asyncStatsPanel"], button.accordion-button[aria-controls="asyncStatsPanel"]'
+        );
+        if (toggle) {
+          try { toggle.click(); } catch (_) {}
+        }
+        panel = document.querySelector("#asyncStatsPanel");
+      }
       if (!panel) return null;
       return Array.from(panel.querySelectorAll(".rz-card")).map((card) => {
         const code = card.querySelector(".fw-bold span.text-muted")?.textContent?.trim() || "";
@@ -2827,6 +2871,15 @@ function resolveLessonSectionIdFromStatsRow(row) {
   return lessonConfig?.id || null;
 }
 
+function classifyStatsRow(row) {
+  const title = String(row?.title || "");
+  const isTestCard = /ερωτησ(?:εισ|εις)|questions?|quiz/iu.test(title);
+  if (isTestCard) return "test";
+  const isLessonCard = /Ε([1-5])\./u.test(title);
+  if (isLessonCard) return "lesson";
+  return "other";
+}
+
 async function syncWebsiteStatsToProgress(progressState) {
   const rows = await waitForCondition(
     async () => readWebsiteStatsPanel(),
@@ -2846,8 +2899,23 @@ async function syncWebsiteStatsToProgress(progressState) {
 
   let synced = 0;
   let skipped = 0;
+  const testTotals = [];
   const parsedRows = [];
   for (const row of rows) {
+    const rowType = classifyStatsRow(row);
+    const rawCode = String(row?.code || "").trim();
+    const codeMatch = rawCode.match(/^100-(\d+)-/);
+    // Per portal structure: only sections 100-3..100-7 are actionable (E1..E5 lessons + their tests).
+    if (!codeMatch || !["3", "4", "5", "6", "7"].includes(codeMatch[1])) {
+      skipped += 1;
+      await appendLog("website_stats_row_skipped", {
+        reason: "code_not_actionable",
+        code: rawCode,
+        rowType,
+        row
+      });
+      continue;
+    }
     const sectionId = resolveLessonSectionIdFromStatsRow(row);
     if (!sectionId) {
       skipped += 1;
@@ -2896,6 +2964,30 @@ async function syncWebsiteStatsToProgress(progressState) {
       continue;
     }
 
+    // Portal tests are 0.25-hour rows paired after each lesson. Treat small targets as tests
+    // even if the title text drifts (deterministic separation).
+    if (targetHours > 0 && targetHours <= 1 || rowType === "test") {
+      testTotals.push({
+        sectionId,
+        code: rawCode,
+        title: row.title,
+        completedMinutes: Math.max(0, Math.min(targetMinutes, completedMinutes)),
+        targetMinutes
+      });
+      continue;
+    }
+
+    if (rowType !== "lesson") {
+      skipped += 1;
+      await appendLog("website_stats_row_skipped", {
+        reason: "row_not_lesson",
+        sectionId,
+        rowType,
+        row
+      });
+      continue;
+    }
+
     const existing = progressState.lessonProgress[sectionId] || {
       targetHours,
       completedMinutes: 0,
@@ -2914,7 +3006,7 @@ async function syncWebsiteStatsToProgress(progressState) {
     };
     parsedRows.push({
       sectionId,
-      code: row.code,
+      code: rawCode,
       completedHours,
       targetHours,
       completedMinutes: progressState.lessonProgress[sectionId].completedMinutes
@@ -2932,11 +3024,13 @@ async function syncWebsiteStatsToProgress(progressState) {
     parsedCount: rows.length,
     skipped,
     parsedRows,
+    testTotals,
     url: getSafeWebviewUrl() || null
   });
   await updateRuntimeState(
     {
       lessonTotals: progressState.lessonProgress,
+      testTotals,
       todayMinutes: progressState.dailyProgress.completedMinutes
     },
     synced > 0 ? `Synced ${synced} website stats` : "No website stats matched lessons"
@@ -2947,15 +3041,28 @@ async function syncWebsiteStatsToProgress(progressState) {
 
 async function findTargetSection(progressState) {
   const sections = await executeInWebview(`
-    (() => Array.from(document.querySelectorAll("li.section.main")).map((element) => {
-      const titleAnchor = element.querySelector(".sectionname a");
-      const activityAnchor = element.querySelector(".activityinstance a.aalink");
-      return {
-        id: element.getAttribute("data-sectionid") || element.id?.replace("section-", "") || null,
-        title: titleAnchor ? titleAnchor.textContent.trim() : "",
-        activityHref: activityAnchor ? activityAnchor.href : null
+    (() => {
+      const extractModuleId = (href) => {
+        const match = String(href || "").match(/[?&]id=(\\d+)/);
+        return match ? match[1] : null;
       };
-    }))()
+      return Array.from(document.querySelectorAll("li.section.main")).map((element) => {
+        const titleAnchor = element.querySelector(".sectionname a");
+        const activityAnchors = Array.from(element.querySelectorAll(".activityinstance a.aalink"));
+        const activities = activityAnchors
+          .map((anchor) => ({
+            href: anchor?.href || null,
+            label: anchor?.textContent?.replace(/\\s+/g, " ").trim() || "",
+            moduleId: extractModuleId(anchor?.href || null)
+          }))
+          .filter((activity) => Boolean(activity.href));
+        return {
+          id: element.getAttribute("data-sectionid") || element.id?.replace("section-", "") || null,
+          title: titleAnchor ? titleAnchor.textContent.trim() : "",
+          activities
+        };
+      });
+    })()
   `);
   if (!Array.isArray(sections) || sections.length === 0) {
     await emitPortalDriftWarning("lesson_section_list", ["li.section.main"]);
@@ -2977,11 +3084,42 @@ async function findTargetSection(progressState) {
   });
   const selected =
     lessonSections.find((section) => section.id === selection?.selectedSectionId) || lessonSections[0];
+
+  const pickLessonAndTestActivities = (section) => {
+    const activities = Array.isArray(section?.activities) ? section.activities : [];
+    const lessonNumber = Number(String(section?.lessonKey || "").replace(/^E/u, ""));
+    const isScorm = (activity) => /\/mod\/scorm\/view\.php\?/i.test(String(activity?.href || ""));
+    const normalize = (value) => String(value || "").replace(/\s+/g, " ").trim();
+
+    const scormActivities = activities.filter(isScorm);
+    const lessonActivity =
+      scormActivities.find((activity) => new RegExp(`^${lessonNumber}\\s*\\.`, "u").test(normalize(activity.label))) ||
+      scormActivities.find((activity) => new RegExp(`\\bΕ${lessonNumber}\\s*\\.`, "u").test(normalize(activity.label))) ||
+      scormActivities.find((activity) => /\\blesson\\b/i.test(normalize(activity.label))) ||
+      scormActivities[0] ||
+      null;
+
+    const testActivity =
+      scormActivities.find((activity) => /^ερωτησ(?:εισ|εις)\\b/iu.test(normalize(activity.label))) ||
+      scormActivities.find((activity) => /\\bquestions?\\b|\\bquiz\\b/iu.test(normalize(activity.label))) ||
+      null;
+
+    return { lessonActivity, testActivity };
+  };
+
+  const { lessonActivity, testActivity } = pickLessonAndTestActivities(selected);
+  selected.activityHref = lessonActivity?.href || selected.activityHref || null;
+  selected.lessonModuleId = lessonActivity?.moduleId || null;
+  selected.testModuleId = testActivity?.moduleId || null;
+  selected.testActivityHref = testActivity?.href || null;
+
   await appendLog("lesson_selection_reason", {
     selectedSectionId: selected.id,
     selectedLessonKey: selected.lessonKey,
     reason: selection?.reason || "fallback_selected",
-    candidateSnapshot: selection?.candidateSnapshot || []
+    candidateSnapshot: selection?.candidateSnapshot || [],
+    selectedLessonModuleId: selected.lessonModuleId,
+    selectedTestModuleId: selected.testModuleId
   });
   await updateRuntimeState({}, `Lesson ${selected.lessonKey} selected (${selection?.reason || "fallback_selected"})`);
   return selected;

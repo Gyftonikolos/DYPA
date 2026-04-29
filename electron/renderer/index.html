@@ -99,6 +99,11 @@
           </section>
 
           <section class="panel dev-only">
+            <div class="panel-label">Test Totals</div>
+            <div id="testTotals" class="lesson-list"></div>
+          </section>
+
+          <section class="panel dev-only">
             <div class="panel-label">Run Health</div>
             <div id="runHealthCard" class="health-card muted">No diagnostics yet.</div>
           </section>
@@ -207,7 +212,7 @@
               <div id="settingsRiskSummary" class="settings-risk-summary risk-low">Looks good for everyday use.</div>
             </div>
 
-            <details class="advanced-settings dev-only">
+            <details class="advanced-settings">
               <summary>Advanced options (optional)</summary>
               <div class="advanced-settings-inner">
                 <div class="panel-subrow">
@@ -224,6 +229,22 @@
                   <div class="preset-row">
                     <input id="settingsDefaultRunAtTime" class="field profile-name-field" type="time" value="17:40">
                     <div id="settingsNextScheduledRun" class="muted">Next scheduled run: none</div>
+                  </div>
+                </div>
+                <div class="panel-subrow">
+                  <span class="muted">Allowed Run Windows (daily)</span>
+                  <div class="preset-row">
+                    <input
+                      id="settingsAllowedWindowsCsv"
+                      class="field profile-name-field"
+                      type="text"
+                      placeholder="00:00-02:00,18:00-22:00"
+                      aria-label="Allowed run windows (daily)"
+                      inputmode="text"
+                      autocomplete="off"
+                      spellcheck="false"
+                    >
+                    <div class="muted">Example: 00:00-02:00,18:00-22:00 (leave empty to run anytime)</div>
                   </div>
                 </div>
                 <div class="form-grid two-col">

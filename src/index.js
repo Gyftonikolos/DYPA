@@ -8,6 +8,11 @@ const { createRunSupervisor } = require("./runSupervisor");
 const { STEP, StepError } = require("./stepContracts");
 const { startDashboardServer } = require("./dashboardServer");
 const {
+  isNowWithinAnyWindow,
+  computeNextWindowStart,
+  minutesUntilWindowEnd
+} = require("./scheduleWindows");
+const {
   loadProgressState,
   saveProgressState,
   ensureProgressStarted,
@@ -115,6 +120,39 @@ function logWarning(event, context = {}) {
   };
   appendSessionLog(config.sessionLogPath, payload);
   console.warn(`[${event}]`, payload);
+}
+
+function repairLessonTargets(progressState) {
+  if (!progressState || typeof progressState !== "object") {
+    return { changed: false, changes: [] };
+  }
+  if (!progressState.lessonProgress || typeof progressState.lessonProgress !== "object") {
+    return { changed: false, changes: [] };
+  }
+
+  const expectedById = new Map(LESSON_SECTION_CONFIG.map((item) => [String(item.id), Number(item.targetHours)]));
+  const changes = [];
+
+  for (const [sectionId, entry] of Object.entries(progressState.lessonProgress)) {
+    const expected = expectedById.get(String(sectionId));
+    if (!Number.isFinite(expected) || expected <= 0) continue;
+    const currentTarget = Number(entry?.targetHours);
+    if (!Number.isFinite(currentTarget) || currentTarget <= 0.25) {
+      if (entry && typeof entry === "object") {
+        entry.targetHours = expected;
+        entry.updatedAt = new Date().toISOString();
+      } else {
+        progressState.lessonProgress[sectionId] = {
+          targetHours: expected,
+          completedMinutes: 0,
+          updatedAt: new Date().toISOString()
+        };
+      }
+      changes.push({ sectionId, from: Number.isFinite(currentTarget) ? currentTarget : null, to: expected });
+    }
+  }
+
+  return { changed: changes.length > 0, changes };
 }
 
 function isPageAlive(page) {
@@ -327,13 +365,50 @@ async function ensureAuthenticated(page) {
   throw new Error("Authentication did not reach the trainee portal after retries.");
 }
 
-async function syncLessonStatsFromPanel(page, progressState) {
-  const statsPanel = page.locator("#asyncStatsPanel");
-  const panelVisible = await statsPanel.isVisible().catch(() => false);
+async function ensureAsyncStatsPanelExpanded(page) {
+  const panel = page.locator("#asyncStatsPanel");
+  if ((await panel.count().catch(() => 0)) === 0) {
+    return { exists: false, expanded: false };
+  }
 
-  if (!panelVisible) {
-    logWarning("async_stats_panel_missing", { url: page.url() });
-    logWarning("portal_drift_detected", {
+  const panelVisible = await panel.isVisible().catch(() => false);
+  if (panelVisible) {
+    return { exists: true, expanded: true };
+  }
+
+  const toggle = page
+    .locator(
+      'button.accordion-button[data-bs-target="#asyncStatsPanel"], button.accordion-button[aria-controls="asyncStatsPanel"]'
+    )
+    .first();
+
+  if ((await toggle.count().catch(() => 0)) === 0) {
+    return { exists: true, expanded: false };
+  }
+
+  await toggle.click({ force: true }).catch(() => {});
+  await page.waitForTimeout(250).catch(() => {});
+  const visibleAfter = await panel.isVisible().catch(() => false);
+  return { exists: true, expanded: visibleAfter };
+}
+
+async function syncLessonStatsFromPanel(page, progressState) {
+  function parseGreekNumber(value) {
+    const raw = String(value || "")
+      .replace(/\s+/g, "")
+      .replace(",", ".");
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  const expansionState = await ensureAsyncStatsPanelExpanded(page);
+  if (!expansionState.exists) {
+    appendSessionLog(config.sessionLogPath, {
+      event: "async_stats_panel_missing",
+      url: page.url()
+    });
+    appendSessionLog(config.sessionLogPath, {
+      event: "portal_drift_detected",
       phase: "stats_panel",
       missingSelectors: ["#asyncStatsPanel"],
       url: page.url()
@@ -341,6 +416,11 @@ async function syncLessonStatsFromPanel(page, progressState) {
     setLastAction("Async stats panel missing", { currentUrl: page.url() });
     console.log("Async stats panel not found on the page. Continuing with local totals.");
     return;
+  }
+
+  const cardsLocator = page.locator("#asyncStatsPanel .rz-card");
+  if ((await cardsLocator.count().catch(() => 0)) === 0 && !expansionState.expanded) {
+    await ensureAsyncStatsPanelExpanded(page);
   }
 
   const cards = await page.locator("#asyncStatsPanel .rz-card").evaluateAll((elements) =>
@@ -358,7 +438,11 @@ async function syncLessonStatsFromPanel(page, progressState) {
 
   for (const card of cards) {
     const lessonMatch = card.title.match(/Ε([1-5])\./u);
-    const hoursMatch = card.progressText.match(/(\d+)\s*από\s*(\d+)/u);
+    const isQuestionsCard = /ερωτησ(?:εισ|εις)|questions?|quiz/iu.test(card.title);
+    if (isQuestionsCard) {
+      continue;
+    }
+    const hoursMatch = card.progressText.match(/([\d.,]+)\s*από\s*([\d.,]+)/u);
 
     if (!lessonMatch || !hoursMatch) {
       continue;
@@ -370,8 +454,16 @@ async function syncLessonStatsFromPanel(page, progressState) {
       continue;
     }
 
-    const completedHours = Number(hoursMatch[1]);
-    const targetHours = Number(hoursMatch[2]);
+    const completedHours = parseGreekNumber(hoursMatch[1]);
+    const targetHours = parseGreekNumber(hoursMatch[2]);
+    if (!Number.isFinite(completedHours) || !Number.isFinite(targetHours)) {
+      continue;
+    }
+    // Guardrail: only treat substantial targets as lessons.
+    // Portal also renders non-lesson rows with 0 / 0.25 hours (info/tests); ignore them here.
+    if (targetHours <= 1) {
+      continue;
+    }
     const liveCompletedMinutes = completedHours * 60;
 
     const currentLessonProgress = ensureLessonProgress(
@@ -673,16 +765,58 @@ async function resolveCourseSections(page) {
   return page.locator("li.section.main, .course-content li.section").evaluateAll((elements) =>
     elements.map((element, index) => {
       const titleAnchor = element.querySelector(".sectionname a");
-      const activityAnchor = element.querySelector(".activityinstance a.aalink");
+      const activityAnchors = Array.from(element.querySelectorAll(".activityinstance a.aalink"));
+      const activities = activityAnchors
+        .map((anchor) => {
+          const href = anchor?.href || null;
+          const label = anchor?.textContent?.replace(/\s+/g, " ").trim() || "";
+          return { href, label };
+        })
+        .filter((activity) => Boolean(activity.href));
 
       return {
         index,
         id: element.getAttribute("data-sectionid") || element.id?.replace("section-", "") || null,
         title: titleAnchor?.textContent?.trim() || `Section ${index + 1}`,
-        activityHref: activityAnchor?.href || null
+        activities
       };
     })
   );
+}
+
+function extractModuleIdFromHref(href) {
+  const match = String(href || "").match(/[?&]id=(\d+)/);
+  return match ? match[1] : null;
+}
+
+function pickLessonAndTestScormActivities(section) {
+  const activities = Array.isArray(section?.activities) ? section.activities : [];
+  const lessonNumber = Number(String(section?.lessonKey || "").replace(/^E/u, ""));
+  const normalize = (value) => String(value || "").replace(/\s+/g, " ").trim();
+  const isScorm = (activity) => /\/mod\/scorm\/view\.php\?/i.test(String(activity?.href || ""));
+
+  const scormActivities = activities.filter(isScorm);
+  const lessonActivity =
+    scormActivities.find((activity) => new RegExp(`^${lessonNumber}\\s*\\.`, "u").test(normalize(activity.label))) ||
+    scormActivities.find((activity) => new RegExp(`\\bΕ${lessonNumber}\\s*\\.`, "u").test(normalize(activity.label))) ||
+    scormActivities[0] ||
+    null;
+
+  const testActivity =
+    scormActivities.find((activity) => /^ερωτησ(?:εισ|εις)\b/iu.test(normalize(activity.label))) ||
+    scormActivities.find((activity) => /\bquestions?\b|\bquiz\b/iu.test(normalize(activity.label))) ||
+    null;
+
+  const decorate = (activity) =>
+    activity
+      ? {
+          ...activity,
+          type: "scorm",
+          moduleId: extractModuleIdFromHref(activity.href)
+        }
+      : null;
+
+  return { lessonActivity: decorate(lessonActivity), testActivity: decorate(testActivity) };
 }
 
 async function resolveTargetSection(page, progressState) {
@@ -696,6 +830,36 @@ async function resolveTargetSection(page, progressState) {
     throw new Error("None of the expected lesson sections (3-7) were found on the course page.");
   }
 
+  if (config.forceScormModuleId) {
+    const forcedId = String(config.forceScormModuleId).trim();
+    const forcedPattern = new RegExp(`[?&]id=${forcedId}(?:$|&)`);
+    for (const section of lessonSections) {
+      const match = (section.activities || []).find((activity) =>
+        forcedPattern.test(String(activity?.href || ""))
+      );
+      if (match?.href) {
+        section.activityHref = match.href;
+        section.activityType = "scorm";
+        section.activityLabel = match.label || "";
+        appendSessionLog(config.sessionLogPath, {
+          event: "force_scorm_activity_selected",
+          forcedModuleId: forcedId,
+          sectionId: section.id,
+          lessonKey: section.lessonKey,
+          activityHref: section.activityHref,
+          activityLabel: section.activityLabel,
+          url: page.url()
+        });
+        return section;
+      }
+    }
+    appendSessionLog(config.sessionLogPath, {
+      event: "force_scorm_activity_not_found",
+      forcedModuleId: forcedId,
+      url: page.url()
+    });
+  }
+
   const selection = resolveLessonSelection(lessonSections, progressState);
   let targetSection = lessonSections.find((section) => section.id === selection.selectedSectionId) || null;
   if (!targetSection) {
@@ -703,8 +867,64 @@ async function resolveTargetSection(page, progressState) {
     targetSection = lessonSections[fallbackIndex];
   }
 
+  const { lessonActivity, testActivity } = pickLessonAndTestScormActivities(targetSection);
+  if (lessonActivity?.href) {
+    targetSection.activityHref = lessonActivity.href;
+    targetSection.activityType = lessonActivity.type;
+    targetSection.activityLabel = lessonActivity.label || "";
+    targetSection.lessonModuleId = lessonActivity.moduleId || null;
+  }
+  if (testActivity?.href) {
+    targetSection.testActivityHref = testActivity.href;
+    targetSection.testModuleId = testActivity.moduleId || null;
+  }
+
   if (!targetSection || !targetSection.id || !targetSection.activityHref) {
-    throw new Error("Could not resolve a valid target lesson section.");
+    const first = Array.isArray(targetSection?.activities) ? targetSection.activities[0] : null;
+    if (!first || !first.href) {
+      appendSessionLog(config.sessionLogPath, {
+        event: "lesson_activity_missing",
+        sectionId: targetSection?.id || null,
+        sectionTitle: targetSection?.title || null,
+        url: page.url()
+      });
+      throw new Error("Could not resolve a valid target lesson section (missing activities).");
+    }
+    targetSection.activityHref = first.href;
+    targetSection.activityType = /\/mod\/scorm\/|scorm/i.test(String(first.href)) ? "scorm" : "unknown";
+    targetSection.activityLabel = first.label || "";
+    if (targetSection.activityType !== "scorm") {
+      appendSessionLog(config.sessionLogPath, {
+        event: "lesson_scorm_activity_not_found",
+        sectionId: targetSection.id,
+        sectionTitle: targetSection.title,
+        pickedActivityType: targetSection.activityType,
+        pickedActivityHref: first.href,
+        pickedActivityLabel: first.label || "",
+        url: page.url()
+      });
+      console.log(
+        `Warning: no SCORM activity detected for section ${targetSection.id}; using first activity instead.`
+      );
+    }
+  }
+
+  if (!targetSection.activityHref) {
+    const { lessonActivity: fallbackLesson } = pickLessonAndTestScormActivities(targetSection);
+    if (fallbackLesson?.href) {
+      targetSection.activityHref = fallbackLesson.href;
+      targetSection.activityType = fallbackLesson.type;
+      targetSection.activityLabel = fallbackLesson.label || "";
+      targetSection.lessonModuleId = fallbackLesson.moduleId || null;
+    }
+  } else if (!targetSection.activityType) {
+    const inferredType = /\/mod\/scorm\/|scorm/i.test(String(targetSection.activityHref))
+      ? "scorm"
+      : /\/mod\/quiz\/|quiz/i.test(String(targetSection.activityHref))
+        ? "quiz"
+        : "unknown";
+    targetSection.activityType = inferredType;
+    targetSection.activityLabel = targetSection.activityLabel || "";
   }
 
   appendSessionLog(config.sessionLogPath, {
@@ -712,7 +932,12 @@ async function resolveTargetSection(page, progressState) {
     selectedSectionId: targetSection.id,
     selectedLessonKey: targetSection.lessonKey,
     reason: selection.reason,
-    candidateSnapshot: selection.candidateSnapshot
+    candidateSnapshot: selection.candidateSnapshot,
+    activityType: targetSection.activityType || null,
+    activityHref: targetSection.activityHref || null,
+    activityLabel: targetSection.activityLabel || null,
+    lessonModuleId: targetSection.lessonModuleId || null,
+    testModuleId: targetSection.testModuleId || null
   });
   setLastAction(`Lesson ${targetSection.lessonKey} selected (${selection.reason})`, {
     currentLesson: targetSection.id
@@ -925,7 +1150,9 @@ async function startScormAttempt(page, targetSection, progressState) {
 
   console.log(`Selected section ${targetSection.id}: ${targetSection.title}`);
 
-  const sectionActivityLink = targetSectionLocator.locator(".activityinstance a.aalink").first();
+  const sectionActivityLink = targetSection.activityHref
+    ? targetSectionLocator.locator(`.activityinstance a.aalink[href="${targetSection.activityHref}"]`).first()
+    : targetSectionLocator.locator(".activityinstance a.aalink").first();
   await Promise.all([
     page.waitForURL((url) => url.toString() === targetSection.activityHref, {
       timeout: config.timeoutMs
@@ -1117,12 +1344,14 @@ async function exitScormAttempt(page, targetSection, progressState, sessionMinut
   return true;
 }
 
-async function runDailyScormLoop(page, targetSection, progressState) {
+async function runDailyScormLoop(page, progressState) {
   const sessionRange = resolveSessionRange(progressState, config);
   const dailyLimitOverride =
     Number.isFinite(Number(progressState.dailyScormLimitMinutes)) && Number(progressState.dailyScormLimitMinutes) > 0
       ? Number(progressState.dailyScormLimitMinutes)
       : config.dailyScormLimitMinutes;
+
+  let lastSectionId = null;
 
   while (true) {
     touchHeartbeat(STEP.PLAYBACK);
@@ -1146,7 +1375,87 @@ async function runDailyScormLoop(page, targetSection, progressState) {
       return;
     }
 
-    const sessionMinutes = pickSessionMinutes(sessionRange, remainingMinutes);
+    if (Array.isArray(config.scheduleWindowsErrors) && config.scheduleWindowsErrors.length > 0) {
+      appendSessionLog(config.sessionLogPath, {
+        event: "schedule_windows_invalid",
+        errors: config.scheduleWindowsErrors
+      });
+    }
+
+    const windowCheck = isNowWithinAnyWindow(config.scheduleWindows);
+    if (!windowCheck.within) {
+      const nextStart = computeNextWindowStart(config.scheduleWindows);
+      const nextStartIso = nextStart ? nextStart.toISOString() : null;
+      transitionRuntimeState("paused", {
+        paused: true,
+        nextPlannedExitAt: nextStartIso,
+        currentUrl: page.url()
+      });
+      setLastAction("Waiting for scheduled window to open", {
+        nextPlannedExitAt: nextStartIso
+      });
+      appendSessionLog(config.sessionLogPath, {
+        event: "schedule_window_waiting",
+        nextWindowStartIso: nextStartIso
+      });
+      console.log(`Outside schedule windows. Waiting until ${nextStartIso || "next available window"}.`);
+
+      while (!isNowWithinAnyWindow(config.scheduleWindows).within) {
+        touchHeartbeat(STEP.PLAYBACK);
+        const next = computeNextWindowStart(config.scheduleWindows);
+        const wakeMs = next ? Math.max(5_000, Math.min(60_000, next.getTime() - Date.now())) : 60_000;
+        const stillAlive = await waitOnLivePage(page, wakeMs);
+        if (!stillAlive) {
+          appendSessionLog(config.sessionLogPath, {
+            event: "schedule_window_wait_interrupted",
+            reason: "page_closed",
+            url: getSafePageUrl(page)
+          });
+          return;
+        }
+      }
+
+      transitionRuntimeState("running", { paused: false, currentUrl: page.url() });
+      setLastAction("Scheduled window open; resuming run", { currentUrl: page.url() });
+      appendSessionLog(config.sessionLogPath, { event: "schedule_window_resumed" });
+    }
+
+    const targetSection = await resolveTargetSection(page, progressState);
+    ensureLessonProgress(progressState, targetSection.id, targetSection.targetHours);
+    setLessonTotals(progressState.lessonProgress);
+
+    if (lastSectionId !== targetSection.id) {
+      lastSectionId = targetSection.id;
+      appendSessionLog(config.sessionLogPath, {
+        event: "lesson_section_advanced",
+        sectionId: targetSection.id,
+        lessonKey: targetSection.lessonKey,
+        sectionTitle: targetSection.title,
+        url: page.url()
+      });
+      updateRuntimeState({
+        currentLesson: targetSection.id,
+        currentLessonTitle: targetSection.title,
+        currentUrl: page.url()
+      });
+      setLastAction(`Advanced to lesson ${targetSection.lessonKey}`, {
+        currentLesson: targetSection.id,
+        currentLessonTitle: targetSection.title
+      });
+      console.log(`Advancing to lesson ${targetSection.lessonKey} (section ${targetSection.id}).`);
+    }
+
+    const activeWindow = isNowWithinAnyWindow(config.scheduleWindows).activeWindow;
+    const windowRemaining = minutesUntilWindowEnd(activeWindow);
+    const effectiveRemainingMinutes =
+      windowRemaining === null ? remainingMinutes : Math.max(0, Math.min(remainingMinutes, windowRemaining));
+
+    if (effectiveRemainingMinutes <= 0) {
+      // Window is effectively closed; loop back into the wait logic.
+      continue;
+    }
+
+    const sessionMinutes = pickSessionMinutes(sessionRange, effectiveRemainingMinutes);
     updateRuntimeState({
       currentLesson: targetSection.id,
       currentLessonTitle: targetSection.title,
@@ -1219,6 +1528,14 @@ async function runWorkflow(page) {
     }
   });
   const progressState = ensureProgressStarted(loadProgressState(config.progressStatePath));
+  const repair = repairLessonTargets(progressState);
+  if (repair.changed) {
+    saveProgressState(progressState);
+    appendSessionLog(config.sessionLogPath, {
+      event: "progress_repaired_lesson_targets",
+      changes: repair.changes
+    });
+  }
   try {
     ensureDailyProgress(progressState);
     setLessonTotals(progressState.lessonProgress);
@@ -1271,7 +1588,7 @@ async function runWorkflow(page) {
     });
     setLastAction("Lesson target synced");
     const playbackResult = await supervisor.executeStep(STEP.PLAYBACK, async () => {
-      await runDailyScormLoop(coursePage, targetSection, progressState);
+      await runDailyScormLoop(coursePage, progressState);
       return { done: true };
     });
     if (!playbackResult.ok) {

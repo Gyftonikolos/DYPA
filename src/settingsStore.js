@@ -3,7 +3,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 
-const SETTINGS_VERSION = 4;
+const SETTINGS_VERSION = 5;
 
 const DEFAULT_SETTINGS = {
   baseUrl: null,
@@ -40,7 +40,8 @@ const DEFAULT_SETTINGS = {
     }
   },
   scheduler: {
-    defaultRunAtLocalTime: "17:40"
+    defaultRunAtLocalTime: "17:40",
+    allowedWindowsCsv: ""
   },
   credentials: {
     username: "",
@@ -168,6 +169,15 @@ function migrateRawSettings(rawInput) {
       migrated.config.scheduler.defaultRunAtLocalTime = "17:40";
     }
     migrated.version = 4;
+  }
+  if (migrated.version < 5) {
+    if (!migrated.config.scheduler || typeof migrated.config.scheduler !== "object") {
+      migrated.config.scheduler = { defaultRunAtLocalTime: "17:40", allowedWindowsCsv: "" };
+    }
+    if (!Object.hasOwn(migrated.config.scheduler, "allowedWindowsCsv")) {
+      migrated.config.scheduler.allowedWindowsCsv = "";
+    }
+    migrated.version = 5;
   }
 
   return migrated;
