@@ -14,7 +14,11 @@ const {
   saveSettings,
   sanitizeForRenderer
 } = require("../src/settingsStore");
-const { parseScheduleWindowsCsv } = require("../src/scheduleWindows");
+const {
+  parseScheduleWindowsCsv,
+  isNowWithinAnyWindow,
+  computeNextWindowStart
+} = require("../src/scheduleWindows");
 
 let botProcess = null;
 let staleRunMonitor = null;
