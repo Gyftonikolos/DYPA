@@ -65,6 +65,46 @@ function computeNextOccurrenceIso(runAtLocalTime) {
   return target.toISOString();
 }
 
+function computeNextScheduledForIso({ runAtLocalTime, allowedWindowsCsv = "" }, fromDate = new Date()) {
+  const normalizedTime = String(runAtLocalTime || "").trim();
+  if (!isValidRunAtLocalTime(normalizedTime)) {
+    return null;
+  }
+
+  // Start with next daily occurrence.
+  const baseIso = computeNextOccurrenceIso(normalizedTime);
+  let candidate = new Date(baseIso);
+
+  // If the scheduler is restricted to certain daily windows, ensure the run happens inside one.
+  const parsedWindows = parseScheduleWindowsCsv(String(allowedWindowsCsv || "").trim());
+  const windows = parsedWindows.windows || [];
+  if (windows.length === 0) {
+    return candidate.toISOString();
+  }
+
+  // If the selected time is not inside an allowed window, move to the next window start.
+  if (!isNowWithinAnyWindow(windows, candidate).within) {
+    const nextWindowStart = computeNextWindowStart(windows, candidate);
+    if (nextWindowStart) {
+      candidate = nextWindowStart;
+    }
+  }
+
+  // Guard against any clock drift / parsing oddities: scheduled run must be in the future.
+  if (candidate.getTime() <= fromDate.getTime()) {
+    const nextWindowStart = computeNextWindowStart(windows, fromDate);
+    if (nextWindowStart) {
+      return nextWindowStart.toISOString();
+    }
+    const fallback = new Date(fromDate);
+    fallback.setDate(fallback.getDate() + 1);
+    fallback.setSeconds(0, 0);
+    return fallback.toISOString();
+  }
+
+  return candidate.toISOString();
+}
+
 function readJsonFile(filePath, fallback) {
   const atomicValue = readAtomicJson(filePath, null);
   if (atomicValue !== null) {
@@ -644,11 +684,14 @@ app.whenReady().then(() => {
     return resolveLessonSelection(payload?.lessonSections || [], payload?.progressState || {});
   });
   ipcMain.handle("schedule:set-next-run", async (_event, payload) => {
-    const runAtLocalTime = String(payload?.runAtLocalTime || "").trim();
+    const settings = getMergedSettingsForUi();
+    const runAtLocalTime = String(payload?.runAtLocalTime || settings.scheduler?.defaultRunAtLocalTime || "").trim();
     if (!isValidRunAtLocalTime(runAtLocalTime)) {
       return { ok: false, reason: "invalid_time_format" };
     }
-    const scheduledForIso = computeNextOccurrenceIso(runAtLocalTime);
+    const allowedWindowsCsv = String(settings.scheduler?.allowedWindowsCsv || "").trim();
+    const scheduledForIso =
+      computeNextScheduledForIso({ runAtLocalTime, allowedWindowsCsv }) || computeNextOccurrenceIso(runAtLocalTime);
     const runtimeState = readJsonFile(config.runtimeStatePath, {});
     if (runtimeState.scheduledRun?.enabled) {
       return { ok: false, reason: "already_scheduled", scheduledRun: runtimeState.scheduledRun };
@@ -656,6 +699,7 @@ app.whenReady().then(() => {
     const scheduledRun = {
       enabled: true,
       runAtLocalTime,
+      allowedWindowsCsv,
       scheduledForIso,
       createdAt: new Date().toISOString(),
       status: "pending",
@@ -697,12 +741,29 @@ app.whenReady().then(() => {
     if (!token || current.triggerToken !== token) {
       return { ok: false, reason: "token_mismatch" };
     }
+    const settings = getMergedSettingsForUi();
+    const allowedWindowsCsv = String(current.allowedWindowsCsv || settings.scheduler?.allowedWindowsCsv || "").trim();
+    const nextScheduledForIso =
+      computeNextScheduledForIso(
+        { runAtLocalTime: current.runAtLocalTime, allowedWindowsCsv },
+        new Date()
+      ) || computeNextOccurrenceIso(current.runAtLocalTime);
     const next = {
       ...current,
-      status: "trigger_consumed",
-      consumedToken: token
+      enabled: true,
+      status: "pending",
+      triggerToken: null,
+      consumedToken: token,
+      lastTriggeredAt: new Date().toISOString(),
+      scheduledForIso: nextScheduledForIso,
+      allowedWindowsCsv
     };
     updateRuntimeState({ scheduledRun: next });
+    appendJsonLine(config.sessionLogPath, {
+      event: "schedule_rescheduled",
+      triggerToken: token,
+      scheduledForIso: nextScheduledForIso
+    });
     return { ok: true, scheduledRun: next };
   });
   ipcMain.handle("bot:start", async () => startBotProcess());
@@ -756,6 +817,41 @@ app.whenReady().then(() => {
 
   createWindow();
 
+  // Auto-arm the scheduler on startup using persisted settings, unless the user explicitly cancelled it.
+  try {
+    const settings = getMergedSettingsForUi();
+    const runtimeState = readJsonFile(config.runtimeStatePath, {});
+    const existing = runtimeState.scheduledRun || null;
+    const shouldAutoArm =
+      !existing?.enabled &&
+      String(existing?.status || "") !== "cancelled" &&
+      isValidRunAtLocalTime(String(settings.scheduler?.defaultRunAtLocalTime || ""));
+    if (shouldAutoArm) {
+      const runAtLocalTime = String(settings.scheduler?.defaultRunAtLocalTime || "").trim();
+      const allowedWindowsCsv = String(settings.scheduler?.allowedWindowsCsv || "").trim();
+      const scheduledForIso =
+        computeNextScheduledForIso({ runAtLocalTime, allowedWindowsCsv }) || computeNextOccurrenceIso(runAtLocalTime);
+      updateRuntimeState({
+        scheduledRun: {
+          enabled: true,
+          runAtLocalTime,
+          allowedWindowsCsv,
+          scheduledForIso,
+          createdAt: new Date().toISOString(),
+          status: "pending",
+          triggerToken: null,
+          consumedToken: existing?.consumedToken || null,
+          lastTriggeredAt: existing?.lastTriggeredAt || null
+        }
+      });
+      appendJsonLine(config.sessionLogPath, {
+        event: "schedule_auto_armed",
+        runAtLocalTime,
+        scheduledForIso
+      });
+    }
+  } catch {}
+
   staleRunMonitor = setInterval(() => {
     const runtimeState = readJsonFile(config.runtimeStatePath, {});
     const heartbeatAt = runtimeState.runtimeDiagnostics?.heartbeatAt;
@@ -796,10 +892,15 @@ app.whenReady().then(() => {
     if (runtimeState.processRunning) {
       const skipped = {
         ...scheduledRun,
-        enabled: false,
-        status: "skipped_running",
+        enabled: true,
+        status: "pending",
         lastTriggeredAt: new Date().toISOString(),
-        triggerToken: null
+        triggerToken: null,
+        scheduledForIso:
+          computeNextScheduledForIso(
+            { runAtLocalTime: scheduledRun.runAtLocalTime, allowedWindowsCsv: scheduledRun.allowedWindowsCsv || "" },
+            new Date()
+          ) || computeNextOccurrenceIso(scheduledRun.runAtLocalTime)
       };
       updateRuntimeState({ scheduledRun: skipped });
       appendJsonLine(config.sessionLogPath, {
@@ -813,7 +914,7 @@ app.whenReady().then(() => {
     const triggerToken = `schedule-${Date.now()}`;
     const triggered = {
       ...scheduledRun,
-      enabled: false,
+      enabled: true,
       status: "triggered_pending_ui",
       lastTriggeredAt: new Date().toISOString(),
       triggerToken
