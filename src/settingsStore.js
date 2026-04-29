@@ -3,7 +3,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 
-const SETTINGS_VERSION = 5;
+const SETTINGS_VERSION = 6;
 
 const DEFAULT_SETTINGS = {
   baseUrl: null,
@@ -26,7 +26,9 @@ const DEFAULT_SETTINGS = {
       startStop: true,
       errors: true,
       limits: true,
-      validation: true
+      validation: true,
+      discordWebhookEnabled: false,
+      discordWebhookUrl: ""
     },
     logging: {
       verboseWebviewConsole: false
@@ -186,6 +188,21 @@ function migrateRawSettings(rawInput) {
       migrated.config.scheduler.nightJitterMinutes = 15;
     }
     migrated.version = 5;
+  }
+  if (migrated.version < 6) {
+    if (!migrated.config.featureFlags || typeof migrated.config.featureFlags !== "object") {
+      migrated.config.featureFlags = {};
+    }
+    if (!migrated.config.featureFlags.notifications || typeof migrated.config.featureFlags.notifications !== "object") {
+      migrated.config.featureFlags.notifications = {};
+    }
+    if (!Object.hasOwn(migrated.config.featureFlags.notifications, "discordWebhookEnabled")) {
+      migrated.config.featureFlags.notifications.discordWebhookEnabled = false;
+    }
+    if (!Object.hasOwn(migrated.config.featureFlags.notifications, "discordWebhookUrl")) {
+      migrated.config.featureFlags.notifications.discordWebhookUrl = "";
+    }
+    migrated.version = 6;
   }
 
   return migrated;

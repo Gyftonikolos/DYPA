@@ -14,6 +14,7 @@ const {
   saveSettings,
   sanitizeForRenderer
 } = require("../src/settingsStore");
+const { sendDiscordWebhook } = require("../src/discordWebhook");
 const {
   parseScheduleWindowsCsv,
   isNowWithinAnyWindow,
@@ -428,6 +429,49 @@ function appendJsonLine(filePath, payload) {
   );
 }
 
+const discordCooldownByKey = {};
+function shouldSendDiscordNow(key, cooldownMs = 60_000) {
+  const now = Date.now();
+  const last = Number(discordCooldownByKey[key] || 0);
+  if (now - last < cooldownMs) {
+    return false;
+  }
+  discordCooldownByKey[key] = now;
+  return true;
+}
+
+async function maybeSendDiscordNotification(kind, message, details = {}) {
+  const settings = loadSettings();
+  const notif = settings?.featureFlags?.notifications || {};
+  const enabled = Boolean(notif.discordWebhookEnabled) && Boolean(notif.discordWebhookUrl);
+  if (!enabled) return false;
+
+  const allow =
+    (kind === "startStop" && Boolean(notif.startStop)) ||
+    (kind === "errors" && Boolean(notif.errors)) ||
+    (kind === "limits" && Boolean(notif.limits)) ||
+    (kind === "validation" && Boolean(notif.validation)) ||
+    kind === "scheduler";
+  if (!allow) return false;
+
+  const key = `${kind}:${String(message || "").slice(0, 80)}`;
+  if (!shouldSendDiscordNow(key)) return false;
+
+  const suffix = details && Object.keys(details).length > 0 ? `\n\`\`\`json\n${JSON.stringify(details, null, 2)}\n\`\`\`` : "";
+  const content = `**DYPA Desktop** (${kind})\n${String(message || "")}${suffix}`;
+  try {
+    await sendDiscordWebhook(String(notif.discordWebhookUrl || ""), { content });
+    return true;
+  } catch (error) {
+    appendJsonLine(config.sessionLogPath, {
+      event: "discord_webhook_failed",
+      level: "warn",
+      message: error?.message || String(error)
+    });
+    return false;
+  }
+}
+
 function startBotProcess() {
   if (botProcess) {
     return { started: false, reason: "already-running" };
@@ -444,6 +488,7 @@ function startBotProcess() {
     event: "desktop_bot_started",
     pid: botProcess.pid
   });
+  maybeSendDiscordNotification("startStop", "Automation started.", { pid: botProcess.pid }).catch(() => {});
 
   botProcess.stdout.on("data", (chunk) => {
     const text = String(chunk || "");
@@ -475,6 +520,9 @@ function startBotProcess() {
         errorCode: "BOT_STDERR",
         message: line
       });
+      if (/error|failed|exception/i.test(line)) {
+        maybeSendDiscordNotification("errors", "Bot error output detected.", { message: line }).catch(() => {});
+      }
     }
   });
 
@@ -484,6 +532,7 @@ function startBotProcess() {
       code,
       signal
     });
+    maybeSendDiscordNotification("startStop", "Automation stopped.", { code, signal }).catch(() => {});
     botProcess = null;
   });
 
@@ -499,6 +548,7 @@ function stopBotProcess() {
     event: "desktop_bot_stop_requested",
     pid: botProcess.pid
   });
+  maybeSendDiscordNotification("startStop", "Stop requested.", { pid: botProcess.pid }).catch(() => {});
 
   botProcess.kill();
   return { stopped: true };
@@ -925,6 +975,9 @@ app.whenReady().then(() => {
         source: "electron.scheduleMonitor",
         scheduledForIso: scheduledRun.scheduledForIso
       });
+      maybeSendDiscordNotification("scheduler", "Scheduled run skipped (already running).", {
+        scheduledForIso: scheduledRun.scheduledForIso
+      }).catch(() => {});
       return;
     }
     const triggerToken = `schedule-${Date.now()}`;
@@ -941,6 +994,9 @@ app.whenReady().then(() => {
       scheduledForIso: scheduledRun.scheduledForIso,
       triggerToken
     });
+    maybeSendDiscordNotification("scheduler", "Scheduled run triggered.", {
+      scheduledForIso: scheduledRun.scheduledForIso
+    }).catch(() => {});
   }, 1_000);
 
   app.on("activate", () => {

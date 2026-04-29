@@ -23,7 +23,9 @@ const DEFAULT_FEATURE_FLAGS = {
     startStop: true,
     errors: true,
     limits: true,
-    validation: true
+    validation: true,
+    discordWebhookEnabled: false,
+    discordWebhookUrl: ""
   },
   logging: {
     verboseWebviewConsole: false
@@ -1110,7 +1112,9 @@ function getSettingsFromForm() {
         startStop: Boolean(document.getElementById("notifStartStop")?.checked),
         errors: Boolean(document.getElementById("notifErrors")?.checked),
         limits: Boolean(document.getElementById("notifLimits")?.checked),
-        validation: Boolean(document.getElementById("notifValidation")?.checked)
+        validation: Boolean(document.getElementById("notifValidation")?.checked),
+        discordWebhookEnabled: Boolean(document.getElementById("notifDiscordEnabled")?.checked),
+        discordWebhookUrl: String(document.getElementById("discordWebhookUrl")?.value || "").trim()
       },
       logging: {
         verboseWebviewConsole: Boolean(document.getElementById("verboseWebviewConsole")?.checked)
@@ -1704,6 +1708,14 @@ function fillSettingsForm(settings) {
   document.getElementById("notifErrors").checked = Boolean(notif.errors);
   document.getElementById("notifLimits").checked = Boolean(notif.limits);
   document.getElementById("notifValidation").checked = Boolean(notif.validation);
+  const discordEnabled = document.getElementById("notifDiscordEnabled");
+  if (discordEnabled) {
+    discordEnabled.checked = Boolean(notif.discordWebhookEnabled);
+  }
+  const discordUrlInput = document.getElementById("discordWebhookUrl");
+  if (discordUrlInput) {
+    discordUrlInput.value = String(notif.discordWebhookUrl || "");
+  }
   document.getElementById("verboseWebviewConsole").checked = Boolean(loggingFlags.verboseWebviewConsole);
   document.getElementById("settingsSimpleMode").checked = Boolean(uiFlags.simpleMode);
   document.getElementById("settingsLightTheme").checked = Boolean(uiFlags.lightTheme);
@@ -4699,7 +4711,9 @@ async function boot() {
     "settingsDailyLimitMinutes",
     "settingsUsername",
     "settingsPassword",
-    "settingsHeadless"
+    "settingsHeadless",
+    "notifDiscordEnabled",
+    "discordWebhookUrl"
   ].forEach((id) => {
     const el = document.getElementById(id);
     if (!el) return;
