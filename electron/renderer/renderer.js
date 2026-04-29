@@ -4084,6 +4084,16 @@ async function runEmbeddedAutomation() {
           completedMinutesToday: progressState.dailyProgress.completedMinutes,
           dailyLimitMinutes
         });
+        await window.desktopApi
+          .sendDiscordNotification({
+            kind: "limits",
+            message: "Daily limit reached.",
+            details: {
+              completedMinutesToday: progressState.dailyProgress.completedMinutes,
+              dailyLimitMinutes
+            }
+          })
+          .catch(() => null);
         await updateRuntimeState({
           status: "idle",
           paused: false,
@@ -4422,6 +4432,12 @@ async function handleStartBot() {
 
   try {
     maybeNotify("Study session started.", "startStop");
+    await window.desktopApi
+      .sendDiscordNotification({
+        kind: "startStop",
+        message: "Study session started (embedded automation)."
+      })
+      .catch(() => null);
     updateOnboardingChecklist("startedAutomation", true);
     recordUiTelemetry("start_automation");
     await runEmbeddedAutomation();
@@ -4447,6 +4463,13 @@ async function handleStartBot() {
       message: error.message,
       url: getSafeWebviewUrl() || null
     });
+    await window.desktopApi
+      .sendDiscordNotification({
+        kind: "errors",
+        message: "Embedded automation failed.",
+        details: { message: error.message, url: getSafeWebviewUrl() || null }
+      })
+      .catch(() => null);
     await updateRuntimeState({
       status: "error",
       paused: false,
@@ -4463,6 +4486,12 @@ async function handleStopBot() {
   embeddedAutomation.stopRequested = true;
   recordUiTelemetry("stop_automation");
   maybeNotify("Stopping safely...", "startStop");
+  await window.desktopApi
+    .sendDiscordNotification({
+      kind: "startStop",
+      message: "Stop requested (embedded automation)."
+    })
+    .catch(() => null);
   if (isScormUrl(getSafeWebviewUrl() || "")) {
     await appendLog("stop_requested_during_scorm", {
       url: getSafeWebviewUrl() || null

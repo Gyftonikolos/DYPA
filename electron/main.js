@@ -838,6 +838,16 @@ app.whenReady().then(() => {
     const ok = await maybeSendDiscordNotification("validation", "Test ping from DYPA Desktop.");
     return { ok, enabled: Boolean(notif.discordWebhookEnabled), hasUrl: Boolean(notif.discordWebhookUrl) };
   });
+  ipcMain.handle("notify:send-discord", async (_event, payload) => {
+    const kind = String(payload?.kind || "validation");
+    const message = String(payload?.message || "").trim();
+    const details = payload?.details && typeof payload.details === "object" ? payload.details : {};
+    if (!message) {
+      return { ok: false, reason: "empty_message" };
+    }
+    const ok = await maybeSendDiscordNotification(kind, message, details);
+    return { ok: Boolean(ok) };
+  });
   ipcMain.handle("bot:start", async () => startBotProcess());
   ipcMain.handle("bot:stop", async () => stopBotProcess());
   ipcMain.handle("dashboard:update-state", async (_event, patch) => {
