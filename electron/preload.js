@@ -26,6 +26,7 @@ contextBridge.exposeInMainWorld("desktopApi", {
   getScheduledRun: () => ipcRenderer.invoke("schedule:get"),
   clearScheduledRun: () => ipcRenderer.invoke("schedule:clear"),
   consumeScheduledTrigger: (payload) => ipcRenderer.invoke("schedule:consume-trigger", payload),
+  testDiscordWebhook: () => ipcRenderer.invoke("notify:test-discord"),
   onWebviewWindowOpen: (handler) => {
     if (typeof handler !== "function") {
       return () => {};

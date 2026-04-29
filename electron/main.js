@@ -832,6 +832,12 @@ app.whenReady().then(() => {
     });
     return { ok: true, scheduledRun: next };
   });
+  ipcMain.handle("notify:test-discord", async () => {
+    const settings = loadSettings();
+    const notif = settings?.featureFlags?.notifications || {};
+    const ok = await maybeSendDiscordNotification("validation", "Test ping from DYPA Desktop.");
+    return { ok, enabled: Boolean(notif.discordWebhookEnabled), hasUrl: Boolean(notif.discordWebhookUrl) };
+  });
   ipcMain.handle("bot:start", async () => startBotProcess());
   ipcMain.handle("bot:stop", async () => stopBotProcess());
   ipcMain.handle("dashboard:update-state", async (_event, patch) => {

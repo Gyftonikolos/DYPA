@@ -1102,6 +1102,20 @@ async function refreshDashboard() {
   }
 }
 
+async function handleTestDiscordWebhook() {
+  const result = await window.desktopApi.testDiscordWebhook().catch(() => null);
+  if (!result?.ok) {
+    setSettingsFeedback(
+      result && result.enabled && result.hasUrl
+        ? "Discord ping failed. Check webhook URL and network."
+        : "Discord is not enabled (toggle it + add URL, then Save Settings).",
+      true
+    );
+    return;
+  }
+  setSettingsFeedback("Discord ping sent. Check your Discord channel.");
+}
+
 function getSettingsFromForm() {
   return {
     ...currentSettings,
@@ -4664,6 +4678,7 @@ async function boot() {
   document.getElementById("stopBotBtn").addEventListener("click", handleStopBot);
   document.getElementById("refreshBtn").addEventListener("click", refreshDashboard);
   document.getElementById("saveSettingsBtn").addEventListener("click", handleSaveSettings);
+  document.getElementById("testDiscordWebhookBtn")?.addEventListener("click", handleTestDiscordWebhook);
   document.getElementById("testSettingsBtn").addEventListener("click", handleTestSettings);
   document.getElementById("previewSettingsBtn").addEventListener("click", toggleSettingsPreview);
   document.getElementById("presetSafeBtn").addEventListener("click", () => applyPreset("safe"));
