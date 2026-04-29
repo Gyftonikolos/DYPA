@@ -332,6 +332,10 @@
               <label>Discord webhook URL
                 <input id="discordWebhookUrl" type="text" class="field" placeholder="https://discord.com/api/webhooks/..." autocomplete="off" spellcheck="false">
               </label>
+              <label class="checkbox-option"><input id="notifDiscordVerbose" type="checkbox"> Discord verbose log (everything)</label>
+              <label>Discord verbose flush (seconds)
+                <input id="notifDiscordVerboseFlushSeconds" type="number" class="field" min="5" step="1" value="20">
+              </label>
               <button id="testDiscordWebhookBtn" class="control-btn" type="button">Send test Discord ping</button>
             </div>
           </section>

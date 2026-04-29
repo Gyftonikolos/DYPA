@@ -430,6 +430,10 @@ function appendJsonLine(filePath, payload) {
 }
 
 const discordCooldownByKey = {};
+const discordTraceBuffer = [];
+let discordTraceFlushTimer = null;
+let discordTraceLastSentAt = 0;
+
 function shouldSendDiscordNow(key, cooldownMs = 60_000) {
   const now = Date.now();
   const last = Number(discordCooldownByKey[key] || 0);
@@ -438,6 +442,57 @@ function shouldSendDiscordNow(key, cooldownMs = 60_000) {
   }
   discordCooldownByKey[key] = now;
   return true;
+}
+
+function enqueueDiscordTrace(line) {
+  const settings = loadSettings();
+  const notif = settings?.featureFlags?.notifications || {};
+  if (!Boolean(notif.discordWebhookEnabled) || !Boolean(notif.discordWebhookUrl) || !Boolean(notif.discordVerbose)) {
+    return;
+  }
+  const normalized = String(line || "").replace(/\s+/g, " ").trim();
+  if (!normalized) return;
+
+  discordTraceBuffer.push(normalized);
+  // hard cap to avoid unbounded growth if Discord is down
+  if (discordTraceBuffer.length > 200) {
+    discordTraceBuffer.splice(0, discordTraceBuffer.length - 200);
+  }
+
+  const flushSeconds = Math.max(5, Math.min(120, Number(notif.discordVerboseFlushSeconds || 20)));
+  if (discordTraceFlushTimer) {
+    return;
+  }
+  discordTraceFlushTimer = setTimeout(() => {
+    discordTraceFlushTimer = null;
+    flushDiscordTrace().catch(() => {});
+  }, flushSeconds * 1000);
+}
+
+async function flushDiscordTrace() {
+  const settings = loadSettings();
+  const notif = settings?.featureFlags?.notifications || {};
+  if (!Boolean(notif.discordWebhookEnabled) || !Boolean(notif.discordWebhookUrl) || !Boolean(notif.discordVerbose)) {
+    discordTraceBuffer.length = 0;
+    return;
+  }
+  if (discordTraceBuffer.length === 0) return;
+
+  // avoid rapid sends
+  const now = Date.now();
+  if (now - discordTraceLastSentAt < 5_000) {
+    enqueueDiscordTrace("[trace] throttled");
+    return;
+  }
+  discordTraceLastSentAt = now;
+
+  const lines = discordTraceBuffer.splice(0, 25);
+  const remaining = discordTraceBuffer.length;
+  const content =
+    `**DYPA Desktop** (trace)\n` +
+    lines.map((l) => `- ${l}`).join("\n") +
+    (remaining > 0 ? `\n…and ${remaining} more queued` : "");
+  await sendDiscordWebhook(String(notif.discordWebhookUrl || ""), { content });
 }
 
 async function maybeSendDiscordNotification(kind, message, details = {}) {
@@ -844,6 +899,10 @@ app.whenReady().then(() => {
     const details = payload?.details && typeof payload.details === "object" ? payload.details : {};
     if (!message) {
       return { ok: false, reason: "empty_message" };
+    }
+    if (kind === "trace") {
+      enqueueDiscordTrace(message);
+      return { ok: true, queued: true };
     }
     const ok = await maybeSendDiscordNotification(kind, message, details);
     return { ok: Boolean(ok) };

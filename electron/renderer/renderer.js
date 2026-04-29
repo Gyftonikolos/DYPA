@@ -25,7 +25,9 @@ const DEFAULT_FEATURE_FLAGS = {
     limits: true,
     validation: true,
     discordWebhookEnabled: false,
-    discordWebhookUrl: ""
+    discordWebhookUrl: "",
+    discordVerbose: false,
+    discordVerboseFlushSeconds: 20
   },
   logging: {
     verboseWebviewConsole: false
@@ -555,6 +557,22 @@ async function appendLog(event, extra = {}) {
     event,
     ...extra
   });
+
+  // Optional: stream everything to Discord (batched by main process).
+  const notif = currentSettings?.featureFlags?.notifications || DEFAULT_FEATURE_FLAGS.notifications;
+  if (notif.discordWebhookEnabled && notif.discordVerbose) {
+    const bits = [];
+    if (extra?.sectionId) bits.push(`section=${extra.sectionId}`);
+    if (extra?.chosenSessionMinutes) bits.push(`mins=${extra.chosenSessionMinutes}`);
+    if (extra?.completedMinutesToday !== undefined) bits.push(`today=${extra.completedMinutesToday}`);
+    if (extra?.dailyLimitMinutes !== undefined) bits.push(`limit=${extra.dailyLimitMinutes}`);
+    if (extra?.nextWindowStartIso) bits.push(`next=${extra.nextWindowStartIso}`);
+    const suffix = bits.length > 0 ? ` (${bits.join(", ")})` : "";
+    const line = `${String(event || "event")}${suffix}`;
+    await window.desktopApi
+      .sendDiscordNotification({ kind: "trace", message: line })
+      .catch(() => null);
+  }
 }
 
 async function updateRuntimeState(patch, lastAction = null) {
@@ -1128,7 +1146,9 @@ function getSettingsFromForm() {
         limits: Boolean(document.getElementById("notifLimits")?.checked),
         validation: Boolean(document.getElementById("notifValidation")?.checked),
         discordWebhookEnabled: Boolean(document.getElementById("notifDiscordEnabled")?.checked),
-        discordWebhookUrl: String(document.getElementById("discordWebhookUrl")?.value || "").trim()
+        discordWebhookUrl: String(document.getElementById("discordWebhookUrl")?.value || "").trim(),
+        discordVerbose: Boolean(document.getElementById("notifDiscordVerbose")?.checked),
+        discordVerboseFlushSeconds: Number(document.getElementById("notifDiscordVerboseFlushSeconds")?.value || 20) || 20
       },
       logging: {
         verboseWebviewConsole: Boolean(document.getElementById("verboseWebviewConsole")?.checked)
@@ -1729,6 +1749,14 @@ function fillSettingsForm(settings) {
   const discordUrlInput = document.getElementById("discordWebhookUrl");
   if (discordUrlInput) {
     discordUrlInput.value = String(notif.discordWebhookUrl || "");
+  }
+  const discordVerboseEl = document.getElementById("notifDiscordVerbose");
+  if (discordVerboseEl) {
+    discordVerboseEl.checked = Boolean(notif.discordVerbose);
+  }
+  const discordVerboseFlushEl = document.getElementById("notifDiscordVerboseFlushSeconds");
+  if (discordVerboseFlushEl) {
+    discordVerboseFlushEl.value = String(Number(notif.discordVerboseFlushSeconds || 20));
   }
   document.getElementById("verboseWebviewConsole").checked = Boolean(loggingFlags.verboseWebviewConsole);
   document.getElementById("settingsSimpleMode").checked = Boolean(uiFlags.simpleMode);
@@ -4757,7 +4785,9 @@ async function boot() {
     "settingsPassword",
     "settingsHeadless",
     "notifDiscordEnabled",
-    "discordWebhookUrl"
+    "discordWebhookUrl",
+    "notifDiscordVerbose",
+    "notifDiscordVerboseFlushSeconds"
   ].forEach((id) => {
     const el = document.getElementById(id);
     if (!el) return;

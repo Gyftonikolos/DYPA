@@ -3,7 +3,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 
-const SETTINGS_VERSION = 6;
+const SETTINGS_VERSION = 7;
 
 const DEFAULT_SETTINGS = {
   baseUrl: null,
@@ -28,7 +28,9 @@ const DEFAULT_SETTINGS = {
       limits: true,
       validation: true,
       discordWebhookEnabled: false,
-      discordWebhookUrl: ""
+      discordWebhookUrl: "",
+      discordVerbose: false,
+      discordVerboseFlushSeconds: 20
     },
     logging: {
       verboseWebviewConsole: false
@@ -203,6 +205,21 @@ function migrateRawSettings(rawInput) {
       migrated.config.featureFlags.notifications.discordWebhookUrl = "";
     }
     migrated.version = 6;
+  }
+  if (migrated.version < 7) {
+    if (!migrated.config.featureFlags || typeof migrated.config.featureFlags !== "object") {
+      migrated.config.featureFlags = {};
+    }
+    if (!migrated.config.featureFlags.notifications || typeof migrated.config.featureFlags.notifications !== "object") {
+      migrated.config.featureFlags.notifications = {};
+    }
+    if (!Object.hasOwn(migrated.config.featureFlags.notifications, "discordVerbose")) {
+      migrated.config.featureFlags.notifications.discordVerbose = false;
+    }
+    if (!Object.hasOwn(migrated.config.featureFlags.notifications, "discordVerboseFlushSeconds")) {
+      migrated.config.featureFlags.notifications.discordVerboseFlushSeconds = 20;
+    }
+    migrated.version = 7;
   }
 
   return migrated;
