@@ -2149,52 +2149,14 @@ function syncEmbeddedUrl() {
 async function loadUrl(url) {
   return enqueueWebviewLoad(async () => {
     const webview = getWebview();
-    if (!embeddedAutomation.webviewReady) {
-      webview.setAttribute("src", url);
-      syncEmbeddedUrl();
-      await waitForWebviewReady();
-      return;
-    }
-
-    try {
-      await withRetry(() => webview.loadURL(url), { retries: 2, phase: "webview_load_url" });
-    } catch (error) {
-      const rawMessage = String(error && error.message ? error.message : error || "");
-      const nestedCause = error && error.cause ? String(error.cause.message || error.cause || "") : "";
-      const combined = `${rawMessage} ${nestedCause}`;
-      const isExpectedAbort =
-        /ERR_ABORTED|\(-3\)|loading\s+['"][^'"]+['"]/i.test(combined) ||
-        Number(error?.errno) === -3 ||
-        Number(error?.cause?.errno) === -3;
-      if (!isExpectedAbort) {
-        throw error;
-      }
-
-      const abortKey = `${String(url || "-")}:${combined.replace(/\s+/g, " ").trim().slice(0, 180)}`;
-      const now = Date.now();
-      const lastAbortLoggedAt = Number(webviewAbortCooldownByKey[abortKey] || 0);
-      if (now - lastAbortLoggedAt >= WEBVIEW_ABORT_DEDUPE_MS) {
-        webviewAbortCooldownByKey[abortKey] = now;
-        const urlKey = String(url || "-");
-        const previous = webviewAbortStatsByUrl[urlKey] || { count: 0, lastAt: 0 };
-        const shouldResetCounter = now - Number(previous.lastAt || 0) > WEBVIEW_ABORT_DEDUPE_MS;
-        const count = shouldResetCounter ? 1 : Number(previous.count || 0) + 1;
-        webviewAbortStatsByUrl[urlKey] = { count, lastAt: now };
-        appendLog("webview_load_aborted_expected", {
-          url: String(url || null),
-          message: combined.trim().slice(0, 300),
-          count
-        }).catch(() => {});
-        if (count >= 3) {
-          appendLog("webview_load_abort_unresolved", {
-            url: String(url || null),
-            count,
-            message: combined.trim().slice(0, 300)
-          }).catch(() => {});
-        }
-      }
-    }
+    // Using webview.loadURL() can cause Electron to print noisy
+    // "GUEST_VIEW_MANAGER_CALL: (-3) loading ..." logs when navigations are superseded.
+    // Setting `src` performs the same navigation without triggering that IPC spam.
+    webview.setAttribute("src", String(url || ""));
     syncEmbeddedUrl();
+    if (!embeddedAutomation.webviewReady) {
+      await waitForWebviewReady();
+    }
   });
 }
 
