@@ -193,6 +193,7 @@ const runtimeDiagnostics = {
   lastStableCheckpoint: "-",
   heartbeatAt: null
 };
+let scormExitInFlightPromise = null;
 const UX_TELEMETRY_KEY = "dypa_ui_telemetry_v1";
 const SETTINGS_PROFILES_KEY = "dypa_settings_profiles_v1";
 const ONBOARDING_STATE_KEY = "dypa_onboarding_state_v1";
@@ -393,6 +394,24 @@ function getSafeWebviewUrl() {
   } catch {}
 
   return webview.getAttribute("src") || webview.src || "-";
+}
+
+function normalizeUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw || raw === "-") {
+    return "";
+  }
+
+  try {
+    const parsed = new URL(raw);
+    parsed.hash = "";
+    if ((parsed.protocol === "http:" && parsed.port === "80") || (parsed.protocol === "https:" && parsed.port === "443")) {
+      parsed.port = "";
+    }
+    return parsed.toString().replace(/\/$/, "").toLowerCase();
+  } catch {
+    return raw.replace(/\/$/, "").toLowerCase();
+  }
 }
 
 function ensureProgressShape(progressState) {
@@ -1721,6 +1740,43 @@ function shouldSkipWebviewConsoleMessage(rawMessage) {
   return false;
 }
 
+function getWebviewAbortMetadata(error, fallbackUrl) {
+  const err = error || {};
+  const cause = error?.cause || null;
+  const nestedCause = cause?.cause || null;
+  const message = String(err?.message || cause?.message || nestedCause?.message || "");
+  const loadingUrlMatch = message.match(/loading\s+['"][^'"]+['"]/i);
+
+  return {
+    code: err?.code || cause?.code || nestedCause?.code || null,
+    errno: err?.errno ?? cause?.errno ?? nestedCause?.errno ?? null,
+    message,
+    loadingMatch: loadingUrlMatch ? loadingUrlMatch[0] : null,
+    url:
+      err?.validatedURL ||
+      err?.url ||
+      cause?.url ||
+      nestedCause?.url ||
+      fallbackUrl ||
+      getSafeWebviewUrl() ||
+      null
+  };
+}
+
+function shouldTreatAsExpectedWebviewAbort(errorLike) {
+  const details = getWebviewAbortMetadata(errorLike);
+  if (details.errno === -3) {
+    return true;
+  }
+  if (String(details.code || "").toUpperCase() === "ERR_ABORTED") {
+    return true;
+  }
+  if (String(details.message || "").toUpperCase().includes("ERR_ABORTED")) {
+    return true;
+  }
+  return false;
+}
+
 function fillSettingsForm(settings) {
   document.getElementById("settingsUsername").value = settings.credentials?.username || "";
   document.getElementById("settingsPassword").value = settings.credentials?.password || "";
@@ -2148,11 +2204,36 @@ function syncEmbeddedUrl() {
 
 async function loadUrl(url) {
   return enqueueWebviewLoad(async () => {
+    const targetUrl = String(url || "").trim();
     const webview = getWebview();
+    const currentUrl = getSafeWebviewUrl();
+    const normalizedTargetUrl = normalizeUrl(targetUrl);
+    const normalizedCurrentUrl = normalizeUrl(currentUrl);
+    const normalizedLastRequestedUrl = normalizeUrl(embeddedAutomation.lastRequestedUrl);
+
+    if (!targetUrl) {
+      embeddedAutomation.lastRequestedUrl = null;
+      webview.setAttribute("src", "");
+      syncEmbeddedUrl();
+      return;
+    }
+
+    if (
+      normalizedTargetUrl &&
+      (normalizedTargetUrl === normalizedCurrentUrl || normalizedTargetUrl === normalizedLastRequestedUrl)
+    ) {
+      syncEmbeddedUrl();
+      if (!embeddedAutomation.webviewReady) {
+        await waitForWebviewReady();
+      }
+      return;
+    }
+
     // Using webview.loadURL() can cause Electron to print noisy
     // "GUEST_VIEW_MANAGER_CALL: (-3) loading ..." logs when navigations are superseded.
     // Setting `src` performs the same navigation without triggering that IPC spam.
-    webview.setAttribute("src", String(url || ""));
+    embeddedAutomation.lastRequestedUrl = targetUrl;
+    webview.setAttribute("src", targetUrl);
     syncEmbeddedUrl();
     if (!embeddedAutomation.webviewReady) {
       await waitForWebviewReady();
@@ -2823,108 +2904,143 @@ async function clickScormExitButton() {
 }
 
 async function exitCurrentScormSafely(targetSection = null, reason = "requested_stop") {
-  const currentUrl = getSafeWebviewUrl() || "";
-  if (!isScormUrl(currentUrl)) {
-    return false;
+  if (scormExitInFlightPromise) {
+    return scormExitInFlightPromise;
   }
 
-  await appendLog("scorm_safe_exit_requested", {
-    sectionId: targetSection?.id || null,
-    reason,
-    url: currentUrl
-  });
-
-  const maxAttempts = 4;
-  let selectedSelector = null;
-  let clicked = false;
-  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    const clickResult = await clickScormExitButton().catch(() => ({ clicked: false, selector: null }));
-    clicked = Boolean(clickResult?.clicked);
-    selectedSelector = clickResult?.selector || selectedSelector;
-    await appendLog("scorm_exit_click_attempt", {
-      sectionId: targetSection?.id || null,
-      reason,
-      attempt,
-      maxAttempts,
-      clicked,
-      selector: clickResult?.selector || null,
-      url: getSafeWebviewUrl() || null
-    });
-    if (clicked) {
-      break;
+  scormExitInFlightPromise = (async () => {
+    const currentUrl = getSafeWebviewUrl() || "";
+    if (!isScormUrl(currentUrl)) {
+      return false;
     }
-    await delay(250);
-  }
 
-  if (!clicked) {
-    await appendLog("scorm_safe_exit_missing", {
+    await appendLog("scorm_safe_exit_requested", {
       sectionId: targetSection?.id || null,
       reason,
-      attemptedSelectors: SCORM_EXIT_SELECTORS,
-      attemptedTextHints: SCORM_EXIT_TEXT_HINTS,
-      url: getSafeWebviewUrl() || null
+      url: currentUrl
     });
-    await appendLog("system_progress_commit_unconfirmed", {
-      sectionId: targetSection?.id || null,
-      reason,
-      stage: "exit_click_not_found",
-      url: getSafeWebviewUrl() || null
-    });
-    return false;
-  }
 
-  const targetPattern = targetSection?.id
-    ? new RegExp(`/course/view\\.php\\?id=7378(?:#section-${targetSection.id})?$`)
-    : /\/course\/view\.php\?id=7378/i;
-
-  try {
-    await waitForCondition(
-      async () => {
-        const latestUrl = getSafeWebviewUrl() || "";
-        return targetPattern.test(latestUrl) ? latestUrl : null;
-      },
-      {
-        timeoutMs: Math.max(6_000, Math.min(appConfig.timeoutMs || 30_000, 20_000)),
-        intervalMs: 400,
-        allowStopRequested: true,
-        errorMessage: `Timed out waiting for SCORM exit URL ${targetPattern}`
+    const maxAttempts = 4;
+    let selectedSelector = null;
+    let clicked = false;
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      const clickResult = await clickScormExitButton().catch(() => ({ clicked: false, selector: null }));
+      clicked = Boolean(clickResult?.clicked);
+      selectedSelector = clickResult?.selector || selectedSelector;
+      await appendLog("scorm_exit_click_attempt", {
+        sectionId: targetSection?.id || null,
+        reason,
+        attempt,
+        maxAttempts,
+        clicked,
+        selector: clickResult?.selector || null,
+        url: getSafeWebviewUrl() || null
+      });
+      if (clicked) {
+        break;
       }
-    );
-  } catch (error) {
-    await appendLog("system_progress_commit_unconfirmed", {
+      await delay(250);
+    }
+
+    if (!clicked) {
+      await appendLog("scorm_safe_exit_missing", {
+        sectionId: targetSection?.id || null,
+        reason,
+        attemptedSelectors: SCORM_EXIT_SELECTORS,
+        attemptedTextHints: SCORM_EXIT_TEXT_HINTS,
+        url: getSafeWebviewUrl() || null
+      });
+      await appendLog("system_progress_commit_unconfirmed", {
+        sectionId: targetSection?.id || null,
+        reason,
+        stage: "exit_click_not_found",
+        url: getSafeWebviewUrl() || null
+      });
+      return false;
+    }
+
+    const targetPattern = targetSection?.id
+      ? new RegExp(`/course/view\\.php\\?id=7378(?:[&#].*)?$`)
+      : /\/course\/view\.php\?id=7378/i;
+
+    try {
+      await waitForCondition(
+        async () => {
+          const latestUrl = getSafeWebviewUrl() || "";
+          if (targetPattern.test(latestUrl) || isCourseUrl(latestUrl) || isElearningLandingUrl(latestUrl)) {
+            return latestUrl;
+          }
+          return null;
+        },
+        {
+          timeoutMs: Math.max(6_000, Math.min(appConfig.timeoutMs || 30_000, 20_000)),
+          intervalMs: 400,
+          allowStopRequested: true,
+          errorMessage: `Timed out waiting for SCORM exit URL ${targetPattern}`
+        }
+      );
+    } catch (error) {
+      await appendLog("scorm_exit_navigation_retrying_autologin", {
+        sectionId: targetSection?.id || null,
+        reason,
+        selector: selectedSelector,
+        message: error?.message || String(error),
+        url: getSafeWebviewUrl() || null
+      });
+
+      await openCourseViaElearningAutologin().catch(async (recoveryError) => {
+        await appendLog("scorm_exit_navigation_recovery_failed", {
+          sectionId: targetSection?.id || null,
+          reason,
+          message: recoveryError?.message || String(recoveryError),
+          url: getSafeWebviewUrl() || null
+        });
+      });
+
+      const afterRecoveryUrl = getSafeWebviewUrl() || "";
+      if (!isCourseUrl(afterRecoveryUrl) && !isElearningLandingUrl(afterRecoveryUrl)) {
+        await appendLog("system_progress_commit_unconfirmed", {
+          sectionId: targetSection?.id || null,
+          reason,
+          selector: selectedSelector,
+          stage: "navigation_confirmation_timeout",
+          message: error?.message || String(error),
+          url: afterRecoveryUrl || null
+        });
+        throw error;
+      }
+    }
+
+    await appendLog("scorm_exit_navigation_confirmed", {
       sectionId: targetSection?.id || null,
       reason,
       selector: selectedSelector,
-      stage: "navigation_confirmation_timeout",
-      message: error?.message || String(error),
       url: getSafeWebviewUrl() || null
     });
-    throw error;
+    await appendLog("system_progress_commit_confirmed", {
+      sectionId: targetSection?.id || null,
+      reason,
+      selector: selectedSelector,
+      url: getSafeWebviewUrl() || null
+    });
+
+    await appendLog("scorm_safe_exit_completed", {
+      sectionId: targetSection?.id || null,
+      reason,
+      url: getSafeWebviewUrl() || null
+    });
+    await updateRuntimeState({
+      currentUrl: getSafeWebviewUrl() || null,
+      nextPlannedExitAt: null
+    }, "SCORM exited safely");
+    return true;
+  })();
+
+  try {
+    return await scormExitInFlightPromise;
+  } finally {
+    scormExitInFlightPromise = null;
   }
-
-  await appendLog("scorm_exit_navigation_confirmed", {
-    sectionId: targetSection?.id || null,
-    reason,
-    selector: selectedSelector,
-    url: getSafeWebviewUrl() || null
-  });
-  await appendLog("system_progress_commit_confirmed", {
-    sectionId: targetSection?.id || null,
-    reason,
-    selector: selectedSelector,
-    url: getSafeWebviewUrl() || null
-  });
-
-  await appendLog("scorm_safe_exit_completed", {
-    sectionId: targetSection?.id || null,
-    reason,
-    url: getSafeWebviewUrl() || null
-  });
-  await updateRuntimeState({
-    currentUrl: getSafeWebviewUrl() || null,
-    nextPlannedExitAt: null
-  }, "SCORM exited safely");
-  return true;
 }
 
 async function fillLoginForm() {
@@ -3335,8 +3451,6 @@ async function applyIncrementalSessionProgress(progressState, targetSection, ses
       date: todayKey,
       completedMinutes: 0
     };
-
-  return result;
   }
   const applied = applyLedgerCheckpoint(progressState, sessionId, checkpointKey, () => {
     progressState.dailyProgress.completedMinutes += minutes;
@@ -4628,8 +4742,37 @@ function setupEmbeddedBrowser() {
     appendLog("webview_did_stop_loading", { url: getSafeWebviewUrl() }).catch(() => {});
   });
   webview.addEventListener("did-fail-load", (event) => {
-    if (event.errorCode === -3) {
+    const abortDetails = getWebviewAbortMetadata(event, event?.validatedURL || getSafeWebviewUrl());
+    const expectedAbort = event.errorCode === -3 || shouldTreatAsExpectedWebviewAbort(event);
+
+    if (expectedAbort) {
+      const dedupeKey = `${abortDetails.url || "unknown"}:${abortDetails.code || event.errorCode || "-3"}`;
+      const now = Date.now();
+      const lastSeen = webviewAbortCooldownByKey[dedupeKey] || 0;
+
+      webviewAbortStatsByUrl[abortDetails.url || "unknown"] =
+        (webviewAbortStatsByUrl[abortDetails.url || "unknown"] || 0) + 1;
+
+      if (now - lastSeen >= WEBVIEW_ABORT_DEDUPE_MS) {
+        webviewAbortCooldownByKey[dedupeKey] = now;
+        appendLog("webview_load_aborted_expected", {
+          url: abortDetails.url,
+          code: abortDetails.code || event.errorCode || null,
+          errno: abortDetails.errno ?? event.errorCode ?? null,
+          loadingMatch: abortDetails.loadingMatch,
+          count: webviewAbortStatsByUrl[abortDetails.url || "unknown"]
+        }).catch(() => {});
+      }
       return;
+    }
+
+    if (String(abortDetails.message || "").toUpperCase().includes("ABORT")) {
+      appendLog("webview_load_abort_unresolved", {
+        url: abortDetails.url,
+        code: abortDetails.code || event.errorCode || null,
+        errno: abortDetails.errno ?? event.errorCode ?? null,
+        message: abortDetails.message || event.errorDescription || "Unknown abort"
+      }).catch(() => {});
     }
 
     const addressBar = document.getElementById("addressBar");

@@ -25,6 +25,45 @@ let botProcess = null;
 let staleRunMonitor = null;
 let scheduleMonitor = null;
 
+function installExpectedGuestViewAbortFilter() {
+  const stderr = process.stderr;
+  if (!stderr || typeof stderr.write !== "function" || stderr.__dypaGuestViewAbortFilterInstalled) {
+    return;
+  }
+
+  const originalWrite = stderr.write.bind(stderr);
+  const shouldDropChunk = (chunk) => {
+    const text = Buffer.isBuffer(chunk) ? chunk.toString("utf8") : String(chunk || "");
+    if (!text) {
+      return false;
+    }
+
+    // Electron can emit benign webview navigation abort spam as:
+    // "Error occurred in handler for 'GUEST_VIEW_MANAGER_CALL': Error: ... (-3) loading '...'"
+    // Keep terminal clean by dropping only this known-noise signature.
+    return text.includes("Error occurred in handler for 'GUEST_VIEW_MANAGER_CALL'") && text.includes("(-3)");
+  };
+
+  stderr.write = function patchedStderrWrite(chunk, encoding, callback) {
+    if (shouldDropChunk(chunk)) {
+      if (typeof callback === "function") {
+        callback();
+      }
+      return true;
+    }
+    return originalWrite(chunk, encoding, callback);
+  };
+
+  Object.defineProperty(stderr, "__dypaGuestViewAbortFilterInstalled", {
+    value: true,
+    enumerable: false,
+    configurable: false,
+    writable: false
+  });
+}
+
+installExpectedGuestViewAbortFilter();
+
 function sanitizeRuntimePatch(patch) {
   const allowedKeys = new Set([
     "status",
