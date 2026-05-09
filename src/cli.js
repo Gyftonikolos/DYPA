@@ -645,46 +645,122 @@ async function resetDailyProgress() {
 
 // ── 9. Reset a lesson ────────────────────────────────────────────────────────
 
-async function resetLesson() {
-  section("Reset Lesson Minutes");
-  LESSON_SECTION_CONFIG.forEach((cfg, i) => {
-    console.log(
-      `  ${col("yellow", String(i + 1))}  ${cfg.lessonKey}  (section ${cfg.id})`,
-    );
-  });
-  const pick = await ask("Pick lesson number [1-5] or 0 to cancel:");
-  const idx = Number(pick) - 1;
-  if (pick === "0" || idx < 0 || idx >= LESSON_SECTION_CONFIG.length) {
-    note("Cancelled.");
-    return;
-  }
-  const cfg = LESSON_SECTION_CONFIG[idx];
-  const confirm = await ask(
-    `Reset ${cfg.lessonKey} (section ${cfg.id}) to 0 minutes? Type YES:`,
-  );
-  if (confirm !== "YES") {
-    note("Cancelled.");
-    return;
-  }
-  try {
-    let ps = loadProgressState(PROGRESS_STATE_PATH);
-    ps = ensureProgressStarted(ps);
-    if (ps.lessonProgress?.[cfg.id]) {
-      ps.lessonProgress[cfg.id].completedMinutes = 0;
-      ps.lessonProgress[cfg.id].updatedAt = new Date().toISOString();
+async function manageChapter() {
+  while (true) {
+    section("Manage Chapter Progress");
+
+    // Load & display current state inline
+    let ps;
+    try {
+      ps = loadProgressState(PROGRESS_STATE_PATH);
+      ps = ensureProgressStarted(ps);
+    } catch (e) {
+      err(`Could not load progress-state.json: ${e.message}`);
+      await ask("Press Enter to continue...");
+      return;
     }
-    saveProgressState(ps);
-    appendSessionLog(SESSION_LOG_PATH, {
-      event: "cli_lesson_reset",
-      sectionId: cfg.id,
-      lessonKey: cfg.lessonKey,
-      resetAt: new Date().toISOString(),
-    });
-    ok(`${cfg.lessonKey} reset.`);
-  } catch (e) {
-    err(`Failed: ${e.message}`);
+
+    console.log(
+      `\n  ${col("bold", "#")}  ${col("bold", "Key")}   ${col("bold", "Completed")}   ${col("bold", "Target")}      ${col("bold", "Progress")}`,
+    );
+    console.log(hr());
+    for (const [i, cfg] of LESSON_SECTION_CONFIG.entries()) {
+      const lp = ps.lessonProgress?.[cfg.id];
+      const completed = Number(lp?.completedMinutes || 0);
+      const target = Number(lp?.targetHours ?? cfg.targetHours) * 60;
+      const pct = target > 0 ? Math.round((completed / target) * 100) : 0;
+      const done = pct >= 100;
+      const c = done ? "green" : pct > 0 ? "yellow" : "gray";
+      console.log(
+        `  ${col("yellow", String(i + 1))}  ${col(c, cfg.lessonKey)}    ${String(fmtMinutes(completed)).padEnd(10)} ${String(fmtMinutes(target)).padEnd(10)} ${bar(completed, target, 16)} ${col("gray", `${pct}%`)}${done ? col("green", " ✓ DONE") : ""}`,
+      );
+    }
+
+    console.log();
+    const pick = await ask("Pick chapter [1-5] or 0 to go back:");
+    const idx = Number(pick) - 1;
+    if (pick === "0" || idx < 0 || idx >= LESSON_SECTION_CONFIG.length) return;
+
+    const cfg = LESSON_SECTION_CONFIG[idx];
+    const lp = ps.lessonProgress?.[cfg.id];
+    const currentMinutes = Number(lp?.completedMinutes || 0);
+    const targetMinutes = Number(lp?.targetHours ?? cfg.targetHours) * 60;
+
+    console.log();
+    console.log(
+      `  Chapter ${col("bold", cfg.lessonKey)} (section ${cfg.id})  —  ${col("white", fmtMinutes(currentMinutes))} / ${fmtMinutes(targetMinutes)}`,
+    );
+    console.log();
+    console.log(`  ${col("yellow", "a")}  Set to exact minutes`);
+    console.log(`  ${col("yellow", "b")}  Mark as fully complete  ${col("gray", `(${fmtMinutes(targetMinutes)})`)}   ${col("green", "← skip this chapter")}`);
+    console.log(`  ${col("yellow", "c")}  Reset to 0`);
+    console.log(`  ${col("yellow", "0")}  Back`);
+    console.log();
+
+    const action = await ask("Action:");
+    if (action === "0") continue;
+
+    let newMinutes = null;
+    let logEvent = "";
+
+    if (action === "a") {
+      const raw = await ask(`Enter completed minutes [current: ${currentMinutes}]:`);
+      const val = Number(raw);
+      if (!Number.isFinite(val) || val < 0) {
+        warn("Invalid number.");
+        continue;
+      }
+      if (val > targetMinutes) {
+        warn(`Target is ${targetMinutes} min — clamping to that.`);
+        newMinutes = targetMinutes;
+      } else {
+        newMinutes = val;
+      }
+      logEvent = "cli_lesson_set_minutes";
+    } else if (action === "b") {
+      const confirm = await ask(
+        `Mark ${cfg.lessonKey} as 100% complete (${fmtMinutes(targetMinutes)})? [y/N]`,
+      );
+      if (confirm.toLowerCase() !== "y") { note("Cancelled."); continue; }
+      newMinutes = targetMinutes;
+      logEvent = "cli_lesson_mark_complete";
+    } else if (action === "c") {
+      const confirm = await ask(`Reset ${cfg.lessonKey} to 0 minutes? Type YES:`);
+      if (confirm !== "YES") { note("Cancelled."); continue; }
+      newMinutes = 0;
+      logEvent = "cli_lesson_reset";
+    } else {
+      warn(`Unknown option: ${action}`);
+      continue;
+    }
+
+    if (newMinutes === null) continue;
+
+    try {
+      if (!ps.lessonProgress) ps.lessonProgress = {};
+      if (!ps.lessonProgress[cfg.id]) {
+        ps.lessonProgress[cfg.id] = { targetHours: cfg.targetHours, completedMinutes: 0, updatedAt: null };
+      }
+      ps.lessonProgress[cfg.id].completedMinutes = newMinutes;
+      ps.lessonProgress[cfg.id].updatedAt = new Date().toISOString();
+      saveProgressState(ps);
+      appendSessionLog(SESSION_LOG_PATH, {
+        event: logEvent,
+        sectionId: cfg.id,
+        lessonKey: cfg.lessonKey,
+        previousMinutes: currentMinutes,
+        newMinutes,
+        updatedAt: new Date().toISOString(),
+      });
+      const pct = targetMinutes > 0 ? Math.round((newMinutes / targetMinutes) * 100) : 0;
+      ok(
+        `${cfg.lessonKey} set to ${fmtMinutes(newMinutes)} / ${fmtMinutes(targetMinutes)}  (${pct}%)${newMinutes >= targetMinutes ? "  — automation will skip this chapter." : ""}`,
+      );
+    } catch (e) {
+      err(`Failed: ${e.message}`);
+    }
+    await ask("Press Enter to continue...");
   }
-  await ask("Press Enter to continue...");
 }
 
 // ─── main loop ──────────────────────────────────────────────────────────────
@@ -716,8 +792,8 @@ async function main() {
       },
       {
         key: "9",
-        label: "Reset Lesson Minutes",
-        hint: "pick a lesson to zero",
+        label: "Manage Chapter Progress",
+        hint: "set / complete / reset any chapter",
       },
     ]);
 
@@ -755,7 +831,7 @@ async function main() {
         await resetDailyProgress();
         break;
       case "9":
-        await resetLesson();
+        await manageChapter();
         break;
       default:
         warn(`Unknown option: ${choice}`);
