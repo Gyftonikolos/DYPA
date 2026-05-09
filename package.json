@@ -6,6 +6,7 @@
   "main": "electron/main.js",
   "scripts": {
     "start": "node src/index.js",
+    "cli": "node src/cli.js",
     "desktop": "electron electron/main.js",
     "codegen": "playwright codegen https://edu.golearn.gr/training/trainee/training",
     "test-run": "playwright test",
@@ -17,7 +18,7 @@
     "test:integration": "node tests/integration/preload.integration.test.js && node tests/integration/ipcMain.integration.test.js && node tests/integration/staleRunMonitor.integration.test.js && node tests/integration/webviewDialogAutoAccept.integration.test.js && node tests/integration/rendererStatic.integration.test.js",
     "test:e2e-ui": "node tests/e2e/ui-theme-simple.e2e.test.js",
     "test:all": "npm run test:unit && npm run test:integration && npm run test:e2e-ui && npm run test:phase2 && npm run test:phase3 && npm run test:phase5 && npm run test:ux-smoke",
-    "check:syntax": "node --check src/index.js && node --check src/runtimeState.js && node --check src/progressStore.js && node --check electron/main.js && node --check electron/preload.js && node --check electron/renderer/renderer.js",
+    "check:syntax": "node --check src/index.js && node --check src/cli.js && node --check src/runtimeState.js && node --check src/progressStore.js && node --check electron/main.js && node --check electron/preload.js && node --check electron/renderer/renderer.js",
     "quality:gate": "npm run check:syntax && npm run test:all"
   },
   "keywords": [

@@ -21,48 +21,99 @@ function parseNumber(value, fallback) {
 module.exports = {
   ...(() => {
     const persisted = loadSettings();
-    const scheduleWindowsCsv =
-      String(persisted.scheduler?.allowedWindowsCsv || process.env.SCHEDULE_WINDOWS || "").trim();
+    const scheduleWindowsCsvRaw = String(
+      persisted.scheduler?.allowedWindowsCsv ||
+        process.env.SCHEDULE_WINDOWS ||
+        "",
+    ).trim();
+    const persistedSchedulerEnabled = persisted.scheduler?.enabled;
+    const schedulerEnabled =
+      typeof persistedSchedulerEnabled === "boolean"
+        ? persistedSchedulerEnabled
+        : parseBoolean(
+            process.env.SCHEDULE_WINDOWS_ENABLED,
+            scheduleWindowsCsvRaw.length > 0,
+          );
+    const scheduleWindowsCsv = schedulerEnabled ? scheduleWindowsCsvRaw : "";
     const scheduleWindowsParsed = parseScheduleWindowsCsv(scheduleWindowsCsv);
     return {
-      baseUrl: persisted.baseUrl || process.env.BASE_URL || "https://edu.golearn.gr/training/trainee/training",
+      baseUrl:
+        persisted.baseUrl ||
+        process.env.BASE_URL ||
+        "https://edu.golearn.gr/training/trainee/training",
       loginUrl:
         persisted.loginUrl ||
         process.env.LOGIN_URL ||
         "https://edu.golearn.gr/login?returnUrl=%2Fp%2Fm%2Fel-GR",
-      dashboardPort: parseNumber(persisted.dashboardPort, parseNumber(process.env.DASHBOARD_PORT, 3030)),
-      headless: parseBoolean(persisted.headless, parseBoolean(process.env.HEADLESS, false)),
-      slowMo: parseNumber(persisted.slowMo, parseNumber(process.env.SLOW_MO, 250)),
-      timeoutMs: parseNumber(persisted.timeoutMs, parseNumber(process.env.TIMEOUT_MS, 30_000)),
+      dashboardPort: parseNumber(
+        persisted.dashboardPort,
+        parseNumber(process.env.DASHBOARD_PORT, 3030),
+      ),
+      headless: parseBoolean(
+        persisted.headless,
+        parseBoolean(process.env.HEADLESS, false),
+      ),
+      slowMo: parseNumber(
+        persisted.slowMo,
+        parseNumber(process.env.SLOW_MO, 250),
+      ),
+      timeoutMs: parseNumber(
+        persisted.timeoutMs,
+        parseNumber(process.env.TIMEOUT_MS, 30_000),
+      ),
       scormSessionMinMinutes: parseNumber(
         persisted.scormSessionMinMinutes,
-        parseNumber(process.env.SCORM_SESSION_MIN_MINUTES, parseNumber(process.env.MAX_SCORM_SESSION_MINUTES, 38))
+        parseNumber(
+          process.env.SCORM_SESSION_MIN_MINUTES,
+          parseNumber(process.env.MAX_SCORM_SESSION_MINUTES, 38),
+        ),
       ),
       scormSessionMaxMinutes: parseNumber(
         persisted.scormSessionMaxMinutes,
-        parseNumber(process.env.SCORM_SESSION_MAX_MINUTES, parseNumber(process.env.MAX_SCORM_SESSION_MINUTES, 41))
+        parseNumber(
+          process.env.SCORM_SESSION_MAX_MINUTES,
+          parseNumber(process.env.MAX_SCORM_SESSION_MINUTES, 41),
+        ),
       ),
       maxScormSessionMinutes: parseNumber(
         persisted.maxScormSessionMinutes,
-        parseNumber(process.env.MAX_SCORM_SESSION_MINUTES, 41)
+        parseNumber(process.env.MAX_SCORM_SESSION_MINUTES, 41),
       ),
       dailyScormLimitMinutes: parseNumber(
         persisted.dailyScormLimitMinutes,
-        parseNumber(process.env.DAILY_SCORM_LIMIT_MINUTES, 350)
+        parseNumber(process.env.DAILY_SCORM_LIMIT_MINUTES, 350),
       ),
-      directCourseMode: Boolean(persisted.featureFlags?.navigation?.directCourseMode),
-      storageStatePath: persisted.storageStatePath || process.env.STORAGE_STATE_PATH || "storage-state.json",
-      progressStatePath: persisted.progressStatePath || process.env.PROGRESS_STATE_PATH || "progress-state.json",
-      sessionLogPath: persisted.sessionLogPath || process.env.SESSION_LOG_PATH || "session-log.jsonl",
-      runtimeStatePath: persisted.runtimeStatePath || process.env.RUNTIME_STATE_PATH || "runtime-state.json",
+      directCourseMode: Boolean(
+        persisted.featureFlags?.navigation?.directCourseMode,
+      ),
+      storageStatePath:
+        persisted.storageStatePath ||
+        process.env.STORAGE_STATE_PATH ||
+        "storage-state.json",
+      progressStatePath:
+        persisted.progressStatePath ||
+        process.env.PROGRESS_STATE_PATH ||
+        "progress-state.json",
+      sessionLogPath:
+        persisted.sessionLogPath ||
+        process.env.SESSION_LOG_PATH ||
+        "session-log.jsonl",
+      runtimeStatePath:
+        persisted.runtimeStatePath ||
+        process.env.RUNTIME_STATE_PATH ||
+        "runtime-state.json",
+      scheduleWindowsEnabled: schedulerEnabled,
       scheduleWindowsCsv,
       scheduleWindows: scheduleWindowsParsed.windows,
       scheduleWindowsErrors: scheduleWindowsParsed.errors,
-      forceScormModuleId: String(process.env.FORCE_SCORM_ID || "").trim() || null,
+      forceScormModuleId:
+        String(process.env.FORCE_SCORM_ID || "").trim() || null,
       credentials: {
-        username: persisted.credentials?.username || process.env.GOLEARN_USERNAME || "",
-        password: persisted.credentials?.password || process.env.GOLEARN_PASSWORD || ""
-      }
+        username:
+          persisted.credentials?.username || process.env.GOLEARN_USERNAME || "",
+        password:
+          persisted.credentials?.password || process.env.GOLEARN_PASSWORD || "",
+      },
     };
   })(),
 };

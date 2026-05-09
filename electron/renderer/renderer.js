@@ -27,18 +27,18 @@ const DEFAULT_FEATURE_FLAGS = {
     discordWebhookEnabled: false,
     discordWebhookUrl: "",
     discordVerbose: false,
-    discordVerboseFlushSeconds: 20
+    discordVerboseFlushSeconds: 20,
   },
   logging: {
-    verboseWebviewConsole: false
+    verboseWebviewConsole: false,
   },
   ui: {
     simpleMode: false,
-    lightTheme: false
+    lightTheme: false,
   },
   navigation: {
-    directCourseMode: false
-  }
+    directCourseMode: false,
+  },
 };
 
 const HELP_CONTENT = {
@@ -48,7 +48,7 @@ const HELP_CONTENT = {
     what: "Runs the end-to-end sequence in the embedded browser and updates live runtime state.",
     when: "Use when credentials and settings are ready for a run.",
     safe: "No numeric value.",
-    example: "Click Start Study Session after checking settings."
+    example: "Click Start Study Session after checking settings.",
   },
   stopAutomation: {
     title: "Stop Safely",
@@ -56,7 +56,7 @@ const HELP_CONTENT = {
     what: "Requests stop and tries to exit SCORM activity cleanly before idling.",
     when: "Use before closing app or changing key settings.",
     safe: "No numeric value.",
-    example: "Click Stop Safely, then wait for idle."
+    example: "Click Stop Safely, then wait for idle.",
   },
   username: {
     title: "Username",
@@ -64,7 +64,7 @@ const HELP_CONTENT = {
     what: "Used in automated login form filling.",
     when: "Change when switching accounts.",
     safe: "Must match your real account username/email.",
-    example: "you@example.com"
+    example: "you@example.com",
   },
   password: {
     title: "Password",
@@ -72,7 +72,7 @@ const HELP_CONTENT = {
     what: "Used during automated authentication.",
     when: "Update after password change.",
     safe: "Keep secret; never share screenshots with this visible.",
-    example: "Use your current account password."
+    example: "Use your current account password.",
   },
   baseUrl: {
     title: "Training URL",
@@ -80,7 +80,7 @@ const HELP_CONTENT = {
     what: "Automation navigates here before opening courses.",
     when: "Only when platform route changes.",
     safe: "Use official full https URL.",
-    example: "https://edu.golearn.gr/training/trainee/training"
+    example: "https://edu.golearn.gr/training/trainee/training",
   },
   loginUrl: {
     title: "Login URL",
@@ -88,7 +88,7 @@ const HELP_CONTENT = {
     what: "First page loaded by the automation login step.",
     when: "Only when auth route changes.",
     safe: "Use official full https login URL.",
-    example: "https://edu.golearn.gr/login?returnUrl=%2f"
+    example: "https://edu.golearn.gr/login?returnUrl=%2f",
   },
   dashboardPort: {
     title: "Dashboard Port",
@@ -96,7 +96,7 @@ const HELP_CONTENT = {
     what: "Sets where local dashboard APIs are served.",
     when: "Change if port is in use.",
     safe: "1024-65535 recommended.",
-    example: "3030"
+    example: "3030",
   },
   headless: {
     title: "Headless",
@@ -104,7 +104,7 @@ const HELP_CONTENT = {
     what: "Visible helps debugging; headless is background mode.",
     when: "Set false while troubleshooting.",
     safe: "false for debug, true for unattended runs.",
-    example: "false"
+    example: "false",
   },
   slowMo: {
     title: "Slow Mo (ms)",
@@ -112,7 +112,7 @@ const HELP_CONTENT = {
     what: "Higher values slow actions and can reduce timing issues.",
     when: "Increase if site behaves inconsistently.",
     safe: "100-600 typical.",
-    example: "250"
+    example: "250",
   },
   timeoutMs: {
     title: "Timeout (ms)",
@@ -120,7 +120,7 @@ const HELP_CONTENT = {
     what: "Caps wait duration for selectors/navigation.",
     when: "Increase on slow network/site response.",
     safe: "30000-90000 typical.",
-    example: "30000"
+    example: "30000",
   },
   sessionMinMinutes: {
     title: "Session Min Minutes",
@@ -128,7 +128,7 @@ const HELP_CONTENT = {
     what: "Each session picks a random value between min and max.",
     when: "Increase if you want longer average sessions.",
     safe: "20-60 recommended.",
-    example: "30"
+    example: "30",
   },
   sessionMaxMinutes: {
     title: "Session Max Minutes",
@@ -136,7 +136,7 @@ const HELP_CONTENT = {
     what: "Upper bound for per-session random duration.",
     when: "Increase for more variance and longer possible sessions.",
     safe: "Min <= Max, typical 30-70.",
-    example: "50"
+    example: "50",
   },
   dailyLimitMinutes: {
     title: "Daily Limit Minutes",
@@ -144,7 +144,7 @@ const HELP_CONTENT = {
     what: "Automation stops once this daily total is reached.",
     when: "Adjust daily target.",
     safe: "180-420 common.",
-    example: "360"
+    example: "360",
   },
   validateSettings: {
     title: "Validate Settings",
@@ -152,7 +152,7 @@ const HELP_CONTENT = {
     what: "Runs basic required-field and numeric validations.",
     when: "Use after editing settings.",
     safe: "No numeric value.",
-    example: "Click Validate before Save."
+    example: "Click Validate before Save.",
   },
   saveSettings: {
     title: "Save Settings",
@@ -160,8 +160,8 @@ const HELP_CONTENT = {
     what: "Writes settings used by future runs.",
     when: "Use after successful validation.",
     safe: "No numeric value.",
-    example: "Save, then restart automation."
-  }
+    example: "Save, then restart automation.",
+  },
 };
 
 const LESSON_SECTION_CONFIG = [
@@ -169,7 +169,7 @@ const LESSON_SECTION_CONFIG = [
   { id: "4", targetHours: 30, lessonKey: "E2" },
   { id: "5", targetHours: 30, lessonKey: "E3" },
   { id: "6", targetHours: 30, lessonKey: "E4" },
-  { id: "7", targetHours: 30, lessonKey: "E5" }
+  { id: "7", targetHours: 30, lessonKey: "E5" },
 ];
 
 const embeddedAutomation = {
@@ -181,7 +181,7 @@ const embeddedAutomation = {
   webviewReadyResolver: null,
   webviewReadyRejector: null,
   navigationChain: Promise.resolve(),
-  lastRequestedUrl: null
+  lastRequestedUrl: null,
 };
 const runtimeDiagnostics = {
   currentStep: "-",
@@ -191,7 +191,7 @@ const runtimeDiagnostics = {
   lastRecoveryAction: "-",
   recoveryAttempts: 0,
   lastStableCheckpoint: "-",
-  heartbeatAt: null
+  heartbeatAt: null,
 };
 let scormExitInFlightPromise = null;
 const UX_TELEMETRY_KEY = "dypa_ui_telemetry_v1";
@@ -201,7 +201,7 @@ let lastActivatedTab = "dashboard";
 const uiTelemetry = {
   actions: {},
   warnings: {},
-  lastActionAt: null
+  lastActionAt: null,
 };
 
 const WEBVIEW_READY_TIMEOUT_MS = 60000;
@@ -254,7 +254,10 @@ function formatScheduledForHuman(targetIso) {
     target.getFullYear() === tomorrow.getFullYear() &&
     target.getMonth() === tomorrow.getMonth() &&
     target.getDate() === tomorrow.getDate();
-  const time = target.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const time = target.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
   if (isSameDay) {
     return `Today at ${time}`;
   }
@@ -270,7 +273,8 @@ function recordUiTelemetry(actionName, warningKey = null) {
   uiTelemetry.lastActionAt = new Date().toISOString();
   if (warningKey) {
     const warning = String(warningKey);
-    uiTelemetry.warnings[warning] = Number(uiTelemetry.warnings[warning] || 0) + 1;
+    uiTelemetry.warnings[warning] =
+      Number(uiTelemetry.warnings[warning] || 0) + 1;
   }
   try {
     localStorage.setItem(UX_TELEMETRY_KEY, JSON.stringify(uiTelemetry));
@@ -280,7 +284,7 @@ function recordUiTelemetry(actionName, warningKey = null) {
       event: "ui_telemetry_action",
       action: key,
       warning: warningKey || null,
-      tab: lastActivatedTab
+      tab: lastActivatedTab,
     })
     .catch(() => {});
 }
@@ -310,8 +314,12 @@ function getMostFrequentEntry(mapLike = {}) {
 }
 
 function getLessonDisplay(sectionId) {
-  const lesson = LESSON_SECTION_CONFIG.find((entry) => entry.id === String(sectionId));
-  return lesson ? `${lesson.lessonKey} • Section ${sectionId}` : `Section ${sectionId}`;
+  const lesson = LESSON_SECTION_CONFIG.find(
+    (entry) => entry.id === String(sectionId),
+  );
+  return lesson
+    ? `${lesson.lessonKey} • Section ${sectionId}`
+    : `Section ${sectionId}`;
 }
 
 function getNextLessonHint(lessonTotals = {}) {
@@ -356,7 +364,7 @@ function getAthensDayKey() {
     timeZone: "Europe/Athens",
     year: "numeric",
     month: "2-digit",
-    day: "2-digit"
+    day: "2-digit",
   }).format(new Date());
 }
 
@@ -372,7 +380,7 @@ async function waitForWebviewReady(timeoutMs = WEBVIEW_READY_TIMEOUT_MS) {
         window.setTimeout(() => {
           reject(new Error("Embedded browser did not become ready in time."));
         }, timeoutMs);
-      })
+      }),
     ]);
   }
 
@@ -405,7 +413,10 @@ function normalizeUrl(value) {
   try {
     const parsed = new URL(raw);
     parsed.hash = "";
-    if ((parsed.protocol === "http:" && parsed.port === "80") || (parsed.protocol === "https:" && parsed.port === "443")) {
+    if (
+      (parsed.protocol === "http:" && parsed.port === "80") ||
+      (parsed.protocol === "https:" && parsed.port === "443")
+    ) {
       parsed.port = "";
     }
     return parsed.toString().replace(/\/$/, "").toLowerCase();
@@ -420,19 +431,22 @@ function ensureProgressShape(progressState) {
     baseSectionIndex: Number(progressState.baseSectionIndex) || 0,
     lessonDurationMinutes: Number(progressState.lessonDurationMinutes) || 60,
     scormSessionMinMinutes:
-      Number.isFinite(Number(progressState.scormSessionMinMinutes)) && Number(progressState.scormSessionMinMinutes) > 0
+      Number.isFinite(Number(progressState.scormSessionMinMinutes)) &&
+      Number(progressState.scormSessionMinMinutes) > 0
         ? Number(progressState.scormSessionMinMinutes)
         : Number(progressState.scormSessionMinutes) > 0
           ? Number(progressState.scormSessionMinutes)
           : 30,
     scormSessionMaxMinutes:
-      Number.isFinite(Number(progressState.scormSessionMaxMinutes)) && Number(progressState.scormSessionMaxMinutes) > 0
+      Number.isFinite(Number(progressState.scormSessionMaxMinutes)) &&
+      Number(progressState.scormSessionMaxMinutes) > 0
         ? Number(progressState.scormSessionMaxMinutes)
         : Number(progressState.scormSessionMinutes) > 0
           ? Number(progressState.scormSessionMinutes)
           : 45,
     dailyScormLimitMinutes:
-      Number.isFinite(Number(progressState.dailyScormLimitMinutes)) && Number(progressState.dailyScormLimitMinutes) > 0
+      Number.isFinite(Number(progressState.dailyScormLimitMinutes)) &&
+      Number(progressState.dailyScormLimitMinutes) > 0
         ? Number(progressState.dailyScormLimitMinutes)
         : null,
     lastResolvedSectionId: progressState.lastResolvedSectionId || null,
@@ -441,10 +455,10 @@ function ensureProgressShape(progressState) {
     lessonProgress: progressState.lessonProgress || {},
     dailyProgress: progressState.dailyProgress || {
       date: getAthensDayKey(),
-      completedMinutes: 0
+      completedMinutes: 0,
     },
     sessionLedger: progressState.sessionLedger || { appliedKeys: {} },
-    stateVersion: Number(progressState.stateVersion || 0)
+    stateVersion: Number(progressState.stateVersion || 0),
   };
 
   for (const lesson of LESSON_SECTION_CONFIG) {
@@ -452,7 +466,7 @@ function ensureProgressShape(progressState) {
       next.lessonProgress[lesson.id] = {
         targetHours: lesson.targetHours,
         completedMinutes: 0,
-        updatedAt: null
+        updatedAt: null,
       };
     }
   }
@@ -460,7 +474,7 @@ function ensureProgressShape(progressState) {
   if (next.dailyProgress.date !== getAthensDayKey()) {
     next.dailyProgress = {
       date: getAthensDayKey(),
-      completedMinutes: 0
+      completedMinutes: 0,
     };
   }
 
@@ -472,16 +486,27 @@ function ensureProgressShape(progressState) {
 }
 
 function ensureLedger(progressState) {
-  if (!progressState.sessionLedger || typeof progressState.sessionLedger !== "object") {
+  if (
+    !progressState.sessionLedger ||
+    typeof progressState.sessionLedger !== "object"
+  ) {
     progressState.sessionLedger = { appliedKeys: {} };
   }
-  if (!progressState.sessionLedger.appliedKeys || typeof progressState.sessionLedger.appliedKeys !== "object") {
+  if (
+    !progressState.sessionLedger.appliedKeys ||
+    typeof progressState.sessionLedger.appliedKeys !== "object"
+  ) {
     progressState.sessionLedger.appliedKeys = {};
   }
   return progressState.sessionLedger;
 }
 
-function applyLedgerCheckpoint(progressState, sessionId, checkpointKey, applyFn) {
+function applyLedgerCheckpoint(
+  progressState,
+  sessionId,
+  checkpointKey,
+  applyFn,
+) {
   const ledger = ensureLedger(progressState);
   const key = `${String(sessionId || "unknown")}:${String(checkpointKey || "final")}`;
   if (ledger.appliedKeys[key]) {
@@ -507,7 +532,7 @@ async function withRetry(fn, options = {}) {
         phase: options.phase || "unknown",
         attempt,
         delayMs,
-        message: error.message || String(error)
+        message: error.message || String(error),
       });
       await delay(delayMs);
     }
@@ -519,7 +544,7 @@ async function saveProgressStateSafe(progressState) {
   const expectedVersion = Number(progressState.stateVersion || 0);
   const response = await window.desktopApi.saveProgressStateVersioned({
     expectedVersion,
-    state: progressState
+    state: progressState,
   });
   if (response?.ok && response?.value) {
     Object.assign(progressState, response.value);
@@ -532,27 +557,45 @@ async function saveProgressStateSafe(progressState) {
 
 function clampProgressInvariants(progressState) {
   const warnings = [];
-  const dailyLimit = Number(progressState.dailyScormLimitMinutes || appConfig.dailyScormLimitMinutes || 0);
-  const dailyCompleted = Number(progressState.dailyProgress?.completedMinutes || 0);
+  const dailyLimit = Number(
+    progressState.dailyScormLimitMinutes ||
+      appConfig.dailyScormLimitMinutes ||
+      0,
+  );
+  const dailyCompleted = Number(
+    progressState.dailyProgress?.completedMinutes || 0,
+  );
   if (!Number.isFinite(dailyCompleted) || dailyCompleted < 0) {
     progressState.dailyProgress.completedMinutes = 0;
     warnings.push({ type: "dailyProgress_invalid_or_negative_clamped" });
   } else if (dailyLimit > 0 && dailyCompleted > dailyLimit) {
     progressState.dailyProgress.completedMinutes = dailyLimit;
-    warnings.push({ type: "dailyProgress_over_limit_clamped", dailyLimitMinutes: dailyLimit });
+    warnings.push({
+      type: "dailyProgress_over_limit_clamped",
+      dailyLimitMinutes: dailyLimit,
+    });
   }
 
-  for (const [sectionId, lesson] of Object.entries(progressState.lessonProgress || {})) {
+  for (const [sectionId, lesson] of Object.entries(
+    progressState.lessonProgress || {},
+  )) {
     const completedMinutes = Number(lesson.completedMinutes || 0);
     const targetMinutes = Number(lesson.targetHours || 0) * 60;
     if (!Number.isFinite(completedMinutes) || completedMinutes < 0) {
       lesson.completedMinutes = 0;
-      warnings.push({ type: "lessonProgress_invalid_or_negative_clamped", sectionId });
+      warnings.push({
+        type: "lessonProgress_invalid_or_negative_clamped",
+        sectionId,
+      });
       continue;
     }
     if (targetMinutes > 0 && completedMinutes > targetMinutes) {
       lesson.completedMinutes = targetMinutes;
-      warnings.push({ type: "lessonProgress_over_target_clamped", sectionId, targetMinutes });
+      warnings.push({
+        type: "lessonProgress_over_target_clamped",
+        sectionId,
+        targetMinutes,
+      });
     }
   }
   return warnings;
@@ -564,28 +607,37 @@ async function appendLog(event, extra = {}) {
   }
   if (event === "recovery_playbook_applied") {
     runtimeDiagnostics.lastRecoveryAction = extra.recoveryAction || "-";
-    runtimeDiagnostics.recoveryAttempts = Number(runtimeDiagnostics.recoveryAttempts || 0) + 1;
+    runtimeDiagnostics.recoveryAttempts =
+      Number(runtimeDiagnostics.recoveryAttempts || 0) + 1;
   }
   if (event === "portal_drift_detected") {
-    runtimeDiagnostics.lastSelectorFailure = (extra.missingSelectors || []).join(", ") || "-";
+    runtimeDiagnostics.lastSelectorFailure =
+      (extra.missingSelectors || []).join(", ") || "-";
   }
   if (event === "progress_invariant_warning") {
-    runtimeDiagnostics.lastSelectorFailure = extra.type || "progress_invariant_warning";
+    runtimeDiagnostics.lastSelectorFailure =
+      extra.type || "progress_invariant_warning";
   }
   await window.desktopApi.appendLog({
     event,
-    ...extra
+    ...extra,
   });
 
   // Optional: stream everything to Discord (batched by main process).
-  const notif = currentSettings?.featureFlags?.notifications || DEFAULT_FEATURE_FLAGS.notifications;
+  const notif =
+    currentSettings?.featureFlags?.notifications ||
+    DEFAULT_FEATURE_FLAGS.notifications;
   if (notif.discordWebhookEnabled && notif.discordVerbose) {
     const bits = [];
     if (extra?.sectionId) bits.push(`section=${extra.sectionId}`);
-    if (extra?.chosenSessionMinutes) bits.push(`mins=${extra.chosenSessionMinutes}`);
-    if (extra?.completedMinutesToday !== undefined) bits.push(`today=${extra.completedMinutesToday}`);
-    if (extra?.dailyLimitMinutes !== undefined) bits.push(`limit=${extra.dailyLimitMinutes}`);
-    if (extra?.nextWindowStartIso) bits.push(`next=${extra.nextWindowStartIso}`);
+    if (extra?.chosenSessionMinutes)
+      bits.push(`mins=${extra.chosenSessionMinutes}`);
+    if (extra?.completedMinutesToday !== undefined)
+      bits.push(`today=${extra.completedMinutesToday}`);
+    if (extra?.dailyLimitMinutes !== undefined)
+      bits.push(`limit=${extra.dailyLimitMinutes}`);
+    if (extra?.nextWindowStartIso)
+      bits.push(`next=${extra.nextWindowStartIso}`);
     const suffix = bits.length > 0 ? ` (${bits.join(", ")})` : "";
     const line = `${String(event || "event")}${suffix}`;
     await window.desktopApi
@@ -597,10 +649,12 @@ async function appendLog(event, extra = {}) {
 async function updateRuntimeState(patch, lastAction = null) {
   const nextPatch = {
     ...patch,
-    processRunning: embeddedAutomation.running
+    processRunning: embeddedAutomation.running,
   };
   const shouldRefreshHeartbeat =
-    lastAction !== null || embeddedAutomation.running || patch?.processRunning === true;
+    lastAction !== null ||
+    embeddedAutomation.running ||
+    patch?.processRunning === true;
   if (shouldRefreshHeartbeat) {
     runtimeDiagnostics.heartbeatAt = new Date().toISOString();
   }
@@ -618,12 +672,12 @@ async function updateRuntimeState(patch, lastAction = null) {
     const { status: _ignored, ...restPatch } = nextPatch;
     const transitioned = await window.desktopApi.transitionState({
       status,
-      patch: restPatch
+      patch: restPatch,
     });
     if (!transitioned?.ok) {
       await window.desktopApi.updateState({
         ...restPatch,
-        lastAction: `Blocked invalid transition ${transitioned?.from || "?"} -> ${transitioned?.to || "?"}`
+        lastAction: `Blocked invalid transition ${transitioned?.from || "?"} -> ${transitioned?.to || "?"}`,
       });
       return;
     }
@@ -639,23 +693,36 @@ function renderState(state, analytics = null) {
   statusBadge.className = `status ${status}`;
   statusBadge.textContent = status.toUpperCase();
 
-  document.getElementById("currentLesson").textContent = state.currentLesson || "-";
+  document.getElementById("currentLesson").textContent =
+    state.currentLesson || "-";
   if (state.currentLesson) {
-    document.getElementById("currentLesson").textContent = getLessonDisplay(state.currentLesson);
+    document.getElementById("currentLesson").textContent = getLessonDisplay(
+      state.currentLesson,
+    );
   }
-  document.getElementById("currentLessonTitle").textContent = state.currentLessonTitle || "";
+  document.getElementById("currentLessonTitle").textContent =
+    state.currentLessonTitle || "";
   const nextLessonHint = document.getElementById("nextLessonHint");
   if (nextLessonHint) {
     nextLessonHint.textContent = getNextLessonHint(state.lessonTotals || {});
   }
   document.getElementById("todayMinutes").textContent = state.todayMinutes ?? 0;
-  document.getElementById("dailyLimit").textContent = `of ${state.dailyLimitMinutes ?? 0} planned`;
+  document.getElementById("dailyLimit").textContent =
+    `of ${state.dailyLimitMinutes ?? 0} planned`;
   document.getElementById("lastAction").textContent = state.lastAction || "-";
-  document.getElementById("lastUpdatedAt").textContent = fmtDate(state.lastUpdatedAt);
+  document.getElementById("lastUpdatedAt").textContent = fmtDate(
+    state.lastUpdatedAt,
+  );
   document.getElementById("botUrl").textContent = state.currentUrl || "-";
-  document.getElementById("pausedText").textContent = String(Boolean(state.paused));
-  document.getElementById("processRunningText").textContent = String(Boolean(state.processRunning));
-  document.getElementById("nextExit").textContent = fmtDate(state.nextPlannedExitAt);
+  document.getElementById("pausedText").textContent = String(
+    Boolean(state.paused),
+  );
+  document.getElementById("processRunningText").textContent = String(
+    Boolean(state.processRunning),
+  );
+  document.getElementById("nextExit").textContent = fmtDate(
+    state.nextPlannedExitAt,
+  );
   const diagnostics = state.runtimeDiagnostics || runtimeDiagnostics;
   const scheduledRun = state.scheduledRun || {};
   const humanSchedulerStatus = (() => {
@@ -673,13 +740,21 @@ function renderState(state, analytics = null) {
   }
   const diagScheduledFor = document.getElementById("diagScheduledFor");
   if (diagScheduledFor) {
-    diagScheduledFor.textContent = formatScheduledForHuman(scheduledRun.scheduledForIso);
+    diagScheduledFor.textContent = formatScheduledForHuman(
+      scheduledRun.scheduledForIso,
+    );
   }
-  const diagScheduleCountdown = document.getElementById("diagScheduleCountdown");
+  const diagScheduleCountdown = document.getElementById(
+    "diagScheduleCountdown",
+  );
   if (diagScheduleCountdown) {
-    diagScheduleCountdown.textContent = fmtCountdown(scheduledRun.scheduledForIso);
+    diagScheduleCountdown.textContent = fmtCountdown(
+      scheduledRun.scheduledForIso,
+    );
   }
-  const diagLastSuccessfulStep = document.getElementById("diagLastSuccessfulStep");
+  const diagLastSuccessfulStep = document.getElementById(
+    "diagLastSuccessfulStep",
+  );
   if (diagLastSuccessfulStep) {
     diagLastSuccessfulStep.textContent = diagnostics.lastSuccessfulStep || "-";
   }
@@ -687,23 +762,35 @@ function renderState(state, analytics = null) {
   if (diagRetryCount) {
     diagRetryCount.textContent = String(diagnostics.retryCount || 0);
   }
-  const diagLastSelectorFailure = document.getElementById("diagLastSelectorFailure");
+  const diagLastSelectorFailure = document.getElementById(
+    "diagLastSelectorFailure",
+  );
   if (diagLastSelectorFailure) {
-    diagLastSelectorFailure.textContent = diagnostics.lastSelectorFailure || "-";
+    diagLastSelectorFailure.textContent =
+      diagnostics.lastSelectorFailure || "-";
   }
-  const diagLastRecoveryAction = document.getElementById("diagLastRecoveryAction");
+  const diagLastRecoveryAction = document.getElementById(
+    "diagLastRecoveryAction",
+  );
   if (diagLastRecoveryAction) {
     diagLastRecoveryAction.textContent = diagnostics.lastRecoveryAction || "-";
   }
   const diagRecoveryAttempts = document.getElementById("diagRecoveryAttempts");
   if (diagRecoveryAttempts) {
-    diagRecoveryAttempts.textContent = String(diagnostics.recoveryAttempts || 0);
+    diagRecoveryAttempts.textContent = String(
+      diagnostics.recoveryAttempts || 0,
+    );
   }
-  const diagLastStableCheckpoint = document.getElementById("diagLastStableCheckpoint");
+  const diagLastStableCheckpoint = document.getElementById(
+    "diagLastStableCheckpoint",
+  );
   if (diagLastStableCheckpoint) {
-    diagLastStableCheckpoint.textContent = diagnostics.lastStableCheckpoint || "-";
+    diagLastStableCheckpoint.textContent =
+      diagnostics.lastStableCheckpoint || "-";
   }
-  document.getElementById("diagHeartbeatAt").textContent = fmtDate(diagnostics.heartbeatAt);
+  document.getElementById("diagHeartbeatAt").textContent = fmtDate(
+    diagnostics.heartbeatAt,
+  );
   renderUxTelemetrySummary();
   const nextScheduledRun = document.getElementById("settingsNextScheduledRun");
   if (nextScheduledRun) {
@@ -723,18 +810,24 @@ function renderState(state, analytics = null) {
   const countdownEl = document.getElementById("countdown");
   if (state.nextPlannedExitAt) {
     const diffMs = new Date(state.nextPlannedExitAt).getTime() - Date.now();
-    countdownEl.textContent = diffMs > 0 ? `in ${fmtMinutes(Math.ceil(diffMs / 60000))}` : "due now";
+    countdownEl.textContent =
+      diffMs > 0 ? `in ${fmtMinutes(Math.ceil(diffMs / 60000))}` : "due now";
   } else {
     countdownEl.textContent = "";
   }
 
   const lessonTotalsRoot = document.getElementById("lessonTotals");
   lessonTotalsRoot.innerHTML = "";
-  const entries = Object.entries(state.lessonTotals || {}).sort((a, b) => Number(a[0]) - Number(b[0]));
+  const entries = Object.entries(state.lessonTotals || {}).sort(
+    (a, b) => Number(a[0]) - Number(b[0]),
+  );
   for (const [sectionId, lesson] of entries) {
     const targetMinutes = (lesson.targetHours || 0) * 60;
     const completedMinutes = lesson.completedMinutes || 0;
-    const percent = targetMinutes > 0 ? Math.min(100, (completedMinutes / targetMinutes) * 100) : 0;
+    const percent =
+      targetMinutes > 0
+        ? Math.min(100, (completedMinutes / targetMinutes) * 100)
+        : 0;
 
     const card = document.createElement("div");
     card.className = "lesson-card";
@@ -756,7 +849,10 @@ function renderState(state, analytics = null) {
     for (const test of tests) {
       const completedMinutes = Number(test.completedMinutes || 0);
       const targetMinutes = Number(test.targetMinutes || 0);
-      const percent = targetMinutes > 0 ? Math.min(100, (completedMinutes / targetMinutes) * 100) : 0;
+      const percent =
+        targetMinutes > 0
+          ? Math.min(100, (completedMinutes / targetMinutes) * 100)
+          : 0;
       const card = document.createElement("div");
       card.className = "lesson-card test-card";
       card.innerHTML = `
@@ -788,7 +884,7 @@ function setButtonState(buttonId, options = {}) {
     label = null,
     classes = null,
     title = null,
-    ariaLabel = null
+    ariaLabel = null,
   } = options;
   button.disabled = Boolean(disabled);
   button.setAttribute("aria-disabled", String(Boolean(disabled)));
@@ -813,65 +909,78 @@ function applyActionButtonStates(state, scheduledRun = {}) {
   const scheduledStatus = String(scheduledRun?.status || "idle");
   const hasScheduledRun = Boolean(
     scheduledRun?.scheduledForIso &&
-      !["idle", "cleared", "consumed", "skipped_running"].includes(scheduledStatus)
+    !["idle", "cleared", "consumed", "skipped_running"].includes(
+      scheduledStatus,
+    ),
   );
 
   const canSetSchedule = !isAutomationRunning && !hasScheduledRun;
   const canCancelSchedule = hasScheduledRun;
   const canStartNow = !isAutomationRunning;
   const canStopNow = isAutomationRunning;
-  const stopDisabledReason = hasScheduledRun && !isAutomationRunning
-    ? "Stop is available only while a session is running. Use Cancel Scheduled Run."
-    : "Nothing is currently running.";
+  const stopDisabledReason =
+    hasScheduledRun && !isAutomationRunning
+      ? "Stop is available only while a session is running. Use Cancel Scheduled Run."
+      : "Nothing is currently running.";
   const stopLabel = "Stop Safely";
   const quickStopLabel = "Stop Automation";
 
   setButtonState("startBotBtn", {
     disabled: !canStartNow,
     label: "Start Study Session",
-    classes: ["primary"]
+    classes: ["primary"],
   });
   setButtonState("quickStartBtn", {
     disabled: !canStartNow,
     label: "Start Automation",
-    classes: ["primary"]
+    classes: ["primary"],
   });
   setButtonState("stopBotBtn", {
     disabled: !canStopNow,
     label: stopLabel,
     classes: ["danger"],
-    title: canStopNow ? "Stop the active automation session safely." : stopDisabledReason,
-    ariaLabel: canStopNow ? stopLabel : `${stopLabel}. ${stopDisabledReason}`
+    title: canStopNow
+      ? "Stop the active automation session safely."
+      : stopDisabledReason,
+    ariaLabel: canStopNow ? stopLabel : `${stopLabel}. ${stopDisabledReason}`,
   });
   setButtonState("quickStopBtn", {
     disabled: !canStopNow,
     label: quickStopLabel,
     classes: ["danger"],
-    title: canStopNow ? "Stop the active automation session." : stopDisabledReason,
-    ariaLabel: canStopNow ? quickStopLabel : `${quickStopLabel}. ${stopDisabledReason}`
+    title: canStopNow
+      ? "Stop the active automation session."
+      : stopDisabledReason,
+    ariaLabel: canStopNow
+      ? quickStopLabel
+      : `${quickStopLabel}. ${stopDisabledReason}`,
   });
 
   setButtonState("runAtTimeBtn", {
     disabled: !canSetSchedule,
     label: hasScheduledRun ? "Scheduled" : "Run at this time",
-    classes: ["success"]
+    classes: ["success"],
   });
   setButtonState("cancelScheduledRunBtn", {
     disabled: !canCancelSchedule,
     label: "Cancel Scheduled Run",
-    classes: ["danger"]
+    classes: ["danger"],
   });
 
   const scheduleActionHint = document.getElementById("scheduleActionHint");
   if (scheduleActionHint) {
-    scheduleActionHint.classList.remove("schedule-hint-neutral", "schedule-hint-success");
+    scheduleActionHint.classList.remove(
+      "schedule-hint-neutral",
+      "schedule-hint-success",
+    );
     if (hasScheduledRun) {
       const runLabel = formatScheduledForHuman(scheduledRun.scheduledForIso);
       const timeLeftLabel = fmtCountdown(scheduledRun.scheduledForIso);
       scheduleActionHint.textContent = `Scheduled for ${runLabel} (${timeLeftLabel}). Use Cancel Scheduled Run to remove it.`;
       scheduleActionHint.classList.add("schedule-hint-success");
     } else if (isAutomationRunning) {
-      scheduleActionHint.textContent = "Scheduling is disabled while automation is running.";
+      scheduleActionHint.textContent =
+        "Scheduling is disabled while automation is running.";
       scheduleActionHint.classList.add("schedule-hint-neutral");
     } else {
       scheduleActionHint.textContent = "No scheduled run.";
@@ -881,21 +990,38 @@ function applyActionButtonStates(state, scheduledRun = {}) {
 
   const stopActionHint = document.getElementById("stopActionHint");
   if (stopActionHint) {
-    stopActionHint.classList.remove("schedule-hint-neutral", "schedule-hint-success");
-    stopActionHint.textContent = canStopNow ? "Automation is running. You can stop safely now." : stopDisabledReason;
-    stopActionHint.classList.add(canStopNow ? "schedule-hint-success" : "schedule-hint-neutral");
+    stopActionHint.classList.remove(
+      "schedule-hint-neutral",
+      "schedule-hint-success",
+    );
+    stopActionHint.textContent = canStopNow
+      ? "Automation is running. You can stop safely now."
+      : stopDisabledReason;
+    stopActionHint.classList.add(
+      canStopNow ? "schedule-hint-success" : "schedule-hint-neutral",
+    );
   }
   const quickStopHint = document.getElementById("quickStopHint");
   if (quickStopHint) {
-    quickStopHint.classList.remove("schedule-hint-neutral", "schedule-hint-success");
-    quickStopHint.textContent = canStopNow ? "Automation is running. Stop is available." : stopDisabledReason;
-    quickStopHint.classList.add(canStopNow ? "schedule-hint-success" : "schedule-hint-neutral");
+    quickStopHint.classList.remove(
+      "schedule-hint-neutral",
+      "schedule-hint-success",
+    );
+    quickStopHint.textContent = canStopNow
+      ? "Automation is running. Stop is available."
+      : stopDisabledReason;
+    quickStopHint.classList.add(
+      canStopNow ? "schedule-hint-success" : "schedule-hint-neutral",
+    );
   }
 
   const syncStatsBtn = document.getElementById("syncStatsBtn");
   if (syncStatsBtn) {
     syncStatsBtn.disabled = isAutomationRunning;
-    syncStatsBtn.setAttribute("aria-disabled", String(Boolean(isAutomationRunning)));
+    syncStatsBtn.setAttribute(
+      "aria-disabled",
+      String(Boolean(isAutomationRunning)),
+    );
   }
 }
 
@@ -918,7 +1044,9 @@ function renderUxTelemetrySummary() {
 }
 
 function getFilteredLogs(logs) {
-  const filterValue = (document.getElementById("logFilter")?.value || "").trim().toLowerCase();
+  const filterValue = (document.getElementById("logFilter")?.value || "")
+    .trim()
+    .toLowerCase();
   return logs.filter((log) => {
     const { group } = classifyLog(log);
     if (activeLogGroup !== "all" && group !== activeLogGroup) {
@@ -954,7 +1082,9 @@ function renderLogs(logs) {
 }
 
 async function handleRunAtTime() {
-  const runAtLocalTime = String(document.getElementById("scheduleTimeInput")?.value || "").trim();
+  const runAtLocalTime = String(
+    document.getElementById("scheduleTimeInput")?.value || "",
+  ).trim();
   const response = await window.desktopApi.setScheduledRun({ runAtLocalTime });
   if (!response?.ok) {
     const reason = response?.reason || "invalid_time_format";
@@ -962,12 +1092,14 @@ async function handleRunAtTime() {
       reason === "already_scheduled"
         ? "A scheduled run is already pending. Cancel it first."
         : "Invalid time format. Use HH:mm.",
-      true
+      true,
     );
     recordUiTelemetry("schedule_set_failed", reason);
     return;
   }
-  setSettingsFeedback(`Scheduled run set for ${fmtDate(response.scheduledRun?.scheduledForIso)}.`);
+  setSettingsFeedback(
+    `Scheduled run set for ${fmtDate(response.scheduledRun?.scheduledForIso)}.`,
+  );
   recordUiTelemetry("schedule_set");
   await refreshDashboard();
 }
@@ -997,10 +1129,18 @@ function buildAllowedWindowsCsvFromAutomationInputs() {
     const hhmmss = raw.match(/^([01]\d|2[0-3]):([0-5]\d):([0-5]\d)$/);
     return hhmmss ? `${hhmmss[1]}:${hhmmss[2]}` : raw;
   };
-  const nightStart = String(document.getElementById("automationNightStart")?.value || "").trim();
-  const nightEnd = String(document.getElementById("automationNightEnd")?.value || "").trim();
-  const eveningStart = String(document.getElementById("automationEveningStart")?.value || "").trim();
-  const eveningEnd = String(document.getElementById("automationEveningEnd")?.value || "").trim();
+  const nightStart = String(
+    document.getElementById("automationNightStart")?.value || "",
+  ).trim();
+  const nightEnd = String(
+    document.getElementById("automationNightEnd")?.value || "",
+  ).trim();
+  const eveningStart = String(
+    document.getElementById("automationEveningStart")?.value || "",
+  ).trim();
+  const eveningEnd = String(
+    document.getElementById("automationEveningEnd")?.value || "",
+  ).trim();
   const tokens = [];
   const nStart = normalizeTime(nightStart);
   const nEnd = normalizeTime(nightEnd);
@@ -1010,21 +1150,33 @@ function buildAllowedWindowsCsvFromAutomationInputs() {
   if (eStart && eEnd) tokens.push(`${eStart}-${eEnd}`);
   return {
     allowedWindowsCsv: tokens.join(","),
-    runAtLocalTime: nStart || eStart || "00:00"
+    runAtLocalTime: nStart || eStart || "00:00",
   };
 }
 
 async function handleApplyAutomationSchedule() {
-  const enabled = Boolean(document.getElementById("automationSchedulerEnabled")?.checked);
+  const enabled = Boolean(
+    document.getElementById("automationSchedulerEnabled")?.checked,
+  );
   if (!enabled) {
-    setAutomationScheduleFeedback("Enable the checkbox first, then click Apply & Enable.", true);
+    setAutomationScheduleFeedback(
+      "Enable the checkbox first, then click Apply & Enable.",
+      true,
+    );
     return;
   }
 
-  const { allowedWindowsCsv, runAtLocalTime } = buildAllowedWindowsCsvFromAutomationInputs();
-  const dailyLimit = Number(document.getElementById("automationDailyLimitMinutes")?.value || 0);
-  const nightTargetMinutes = Number(document.getElementById("automationNightTargetMinutes")?.value || 0);
-  const nightJitterMinutes = Number(document.getElementById("automationNightJitterMinutes")?.value || 0);
+  const { allowedWindowsCsv, runAtLocalTime } =
+    buildAllowedWindowsCsvFromAutomationInputs();
+  const dailyLimit = Number(
+    document.getElementById("automationDailyLimitMinutes")?.value || 0,
+  );
+  const nightTargetMinutes = Number(
+    document.getElementById("automationNightTargetMinutes")?.value || 0,
+  );
+  const nightJitterMinutes = Number(
+    document.getElementById("automationNightJitterMinutes")?.value || 0,
+  );
 
   // Keep Settings tab and Automation tab in sync by writing into settings inputs,
   // then reusing the existing save pipeline.
@@ -1038,29 +1190,46 @@ async function handleApplyAutomationSchedule() {
   if (defaultRunAt) {
     defaultRunAt.value = runAtLocalTime;
   }
-  const nightTargetInput = document.getElementById("settingsNightTargetMinutes");
-  if (nightTargetInput && Number.isFinite(nightTargetMinutes) && nightTargetMinutes >= 0) {
+  const nightTargetInput = document.getElementById(
+    "settingsNightTargetMinutes",
+  );
+  if (
+    nightTargetInput &&
+    Number.isFinite(nightTargetMinutes) &&
+    nightTargetMinutes >= 0
+  ) {
     nightTargetInput.value = String(nightTargetMinutes);
   }
-  const nightJitterInput = document.getElementById("settingsNightJitterMinutes");
-  if (nightJitterInput && Number.isFinite(nightJitterMinutes) && nightJitterMinutes >= 0) {
+  const nightJitterInput = document.getElementById(
+    "settingsNightJitterMinutes",
+  );
+  if (
+    nightJitterInput &&
+    Number.isFinite(nightJitterMinutes) &&
+    nightJitterMinutes >= 0
+  ) {
     nightJitterInput.value = String(nightJitterMinutes);
   }
 
   const saved = await handleSaveSettings().catch(() => null);
   if (saved === null) {
     // handleSaveSettings already reports errors to Settings feedback; mirror a short hint here.
-    setAutomationScheduleFeedback("Could not save settings. Open Settings tab for details.", true);
+    setAutomationScheduleFeedback(
+      "Could not save settings. Open Settings tab for details.",
+      true,
+    );
     return;
   }
 
-  const scheduleResponse = await window.desktopApi.setScheduledRun({ runAtLocalTime }).catch(() => null);
+  const scheduleResponse = await window.desktopApi
+    .setScheduledRun({ runAtLocalTime })
+    .catch(() => null);
   if (!scheduleResponse?.ok) {
     setAutomationScheduleFeedback(
       scheduleResponse?.reason === "already_scheduled"
         ? "A scheduled run is already pending. Disable it first."
         : "Could not enable scheduler (invalid time).",
-      true
+      true,
     );
     return;
   }
@@ -1068,28 +1237,57 @@ async function handleApplyAutomationSchedule() {
   setAutomationScheduleFeedback(
     scheduleResponse?.scheduledRun?.scheduledForIso
       ? `Enabled. Next run: ${fmtDate(scheduleResponse.scheduledRun.scheduledForIso)}`
-      : "Enabled."
+      : "Enabled.",
   );
   await refreshDashboard();
 }
 
 async function handleDisableAutomationSchedule() {
-  document.getElementById("automationSchedulerEnabled")?.setAttribute("disabled", "disabled");
-  const response = await window.desktopApi.clearScheduledRun().catch(() => null);
-  document.getElementById("automationSchedulerEnabled")?.removeAttribute("disabled");
+  document
+    .getElementById("automationSchedulerEnabled")
+    ?.setAttribute("disabled", "disabled");
+  const response = await window.desktopApi
+    .clearScheduledRun()
+    .catch(() => null);
+  document
+    .getElementById("automationSchedulerEnabled")
+    ?.removeAttribute("disabled");
   if (!response?.ok) {
     setAutomationScheduleFeedback("Could not disable scheduler.", true);
     return;
   }
   const checkbox = document.getElementById("automationSchedulerEnabled");
   if (checkbox) checkbox.checked = false;
+
+  // Persist disabling so backend runtime stops enforcing allowed windows.
+  const candidate = getSettingsFromForm();
+  candidate.scheduler = {
+    ...(candidate.scheduler || {}),
+    enabled: false,
+  };
+  const saveResult = await window.desktopApi
+    .saveSettings(candidate)
+    .catch(() => null);
+  if (!saveResult?.ok) {
+    setAutomationScheduleFeedback(
+      "Scheduled run cleared, but failed to persist scheduler disable.",
+      true,
+    );
+    return;
+  }
+  currentSettings = saveResult.settings;
+  fillSettingsForm(currentSettings);
+
   setAutomationScheduleFeedback("Scheduler disabled.");
   await refreshDashboard();
 }
 
 async function maybeHandleScheduledTrigger(state) {
   const scheduledRun = state?.scheduledRun || {};
-  if (scheduledRun.status !== "triggered_pending_ui" || !scheduledRun.triggerToken) {
+  if (
+    scheduledRun.status !== "triggered_pending_ui" ||
+    !scheduledRun.triggerToken
+  ) {
     return;
   }
   if (scheduledRun.triggerToken === lastHandledScheduleTriggerToken) {
@@ -1098,19 +1296,21 @@ async function maybeHandleScheduledTrigger(state) {
   lastHandledScheduleTriggerToken = scheduledRun.triggerToken;
   await appendLog("schedule_triggered_ui_starting", {
     triggerToken: scheduledRun.triggerToken,
-    scheduledForIso: scheduledRun.scheduledForIso || null
+    scheduledForIso: scheduledRun.scheduledForIso || null,
   });
   if (!embeddedAutomation.running) {
     await handleStartBot().catch(() => null);
   }
-  await window.desktopApi.consumeScheduledTrigger({ triggerToken: scheduledRun.triggerToken }).catch(() => null);
+  await window.desktopApi
+    .consumeScheduledTrigger({ triggerToken: scheduledRun.triggerToken })
+    .catch(() => null);
 }
 
 async function refreshDashboard() {
   const [state, logs, analytics] = await Promise.all([
     window.desktopApi.getState(),
     window.desktopApi.getLogs(),
-    window.desktopApi.getAnalytics().catch(() => null)
+    window.desktopApi.getAnalytics().catch(() => null),
   ]);
   fullLogs = logs;
   renderState(state, analytics);
@@ -1118,23 +1318,32 @@ async function refreshDashboard() {
   renderRunHealth();
   renderValidationAssistant();
 
-  const reachedLimit = Number(state.todayMinutes || 0) >= Number(state.dailyLimitMinutes || 0) && Number(state.dailyLimitMinutes || 0) > 0;
+  const reachedLimit =
+    Number(state.todayMinutes || 0) >= Number(state.dailyLimitMinutes || 0) &&
+    Number(state.dailyLimitMinutes || 0) > 0;
   if (reachedLimit) {
     maybeNotify("Daily limit reached.", "limits");
   }
 
-  const hasErrorLog = [...logs].reverse().some((log) => classifyLog(log).severity === "error");
+  const hasErrorLog = [...logs]
+    .reverse()
+    .some((log) => classifyLog(log).severity === "error");
   if (hasErrorLog) {
-    maybeNotify("Recent automation error detected. Check Run Health and Logs.", "errors");
+    maybeNotify(
+      "Recent automation error detected. Check Run Health and Logs.",
+      "errors",
+    );
   }
 
   // Keep scheduler panel feedback roughly in sync.
-  const automationEnabled = Boolean(document.getElementById("automationSchedulerEnabled")?.checked);
+  const automationEnabled = Boolean(
+    document.getElementById("automationSchedulerEnabled")?.checked,
+  );
   if (!automationEnabled) {
     setAutomationScheduleFeedback(
       state?.scheduledRun?.enabled && state?.scheduledRun?.scheduledForIso
         ? `Enabled. Next run: ${fmtDate(state.scheduledRun.scheduledForIso)}`
-        : "Scheduler is not enabled."
+        : "Scheduler is not enabled.",
     );
   }
 }
@@ -1146,7 +1355,7 @@ async function handleTestDiscordWebhook() {
       result && result.enabled && result.hasUrl
         ? "Discord ping failed. Check webhook URL and network."
         : "Discord is not enabled (toggle it + add URL, then Save Settings).",
-      true
+      true,
     );
     return;
   }
@@ -1154,6 +1363,19 @@ async function handleTestDiscordWebhook() {
 }
 
 function getSettingsFromForm() {
+  const schedulerEnabledCheckbox = document.getElementById(
+    "automationSchedulerEnabled",
+  );
+  const schedulerEnabledFallback = Boolean(
+    currentSettings?.scheduler?.enabled ??
+    String(
+      document.getElementById("settingsAllowedWindowsCsv")?.value || "",
+    ).trim(),
+  );
+  const schedulerEnabled = schedulerEnabledCheckbox
+    ? Boolean(schedulerEnabledCheckbox.checked)
+    : schedulerEnabledFallback;
+
   return {
     ...currentSettings,
     featureFlags: {
@@ -1163,43 +1385,84 @@ function getSettingsFromForm() {
         startStop: Boolean(document.getElementById("notifStartStop")?.checked),
         errors: Boolean(document.getElementById("notifErrors")?.checked),
         limits: Boolean(document.getElementById("notifLimits")?.checked),
-        validation: Boolean(document.getElementById("notifValidation")?.checked),
-        discordWebhookEnabled: Boolean(document.getElementById("notifDiscordEnabled")?.checked),
-        discordWebhookUrl: String(document.getElementById("discordWebhookUrl")?.value || "").trim(),
-        discordVerbose: Boolean(document.getElementById("notifDiscordVerbose")?.checked),
-        discordVerboseFlushSeconds: Number(document.getElementById("notifDiscordVerboseFlushSeconds")?.value || 20) || 20
+        validation: Boolean(
+          document.getElementById("notifValidation")?.checked,
+        ),
+        discordWebhookEnabled: Boolean(
+          document.getElementById("notifDiscordEnabled")?.checked,
+        ),
+        discordWebhookUrl: String(
+          document.getElementById("discordWebhookUrl")?.value || "",
+        ).trim(),
+        discordVerbose: Boolean(
+          document.getElementById("notifDiscordVerbose")?.checked,
+        ),
+        discordVerboseFlushSeconds:
+          Number(
+            document.getElementById("notifDiscordVerboseFlushSeconds")?.value ||
+              20,
+          ) || 20,
       },
       logging: {
-        verboseWebviewConsole: Boolean(document.getElementById("verboseWebviewConsole")?.checked)
+        verboseWebviewConsole: Boolean(
+          document.getElementById("verboseWebviewConsole")?.checked,
+        ),
       },
       ui: {
-        simpleMode: Boolean(document.getElementById("settingsSimpleMode")?.checked),
-        lightTheme: Boolean(document.getElementById("settingsLightTheme")?.checked)
+        simpleMode: Boolean(
+          document.getElementById("settingsSimpleMode")?.checked,
+        ),
+        lightTheme: Boolean(
+          document.getElementById("settingsLightTheme")?.checked,
+        ),
       },
       navigation: {
-        directCourseMode: Boolean(document.getElementById("settingsDirectCourseMode")?.checked)
-      }
+        directCourseMode: Boolean(
+          document.getElementById("settingsDirectCourseMode")?.checked,
+        ),
+      },
     },
     scheduler: {
-      defaultRunAtLocalTime: String(document.getElementById("settingsDefaultRunAtTime")?.value || "17:40"),
-      allowedWindowsCsv: String(document.getElementById("settingsAllowedWindowsCsv")?.value || "").trim(),
-      nightTargetMinutes: Number(document.getElementById("settingsNightTargetMinutes")?.value || 0) || 0,
-      nightJitterMinutes: Number(document.getElementById("settingsNightJitterMinutes")?.value || 0) || 0
+      enabled: schedulerEnabled,
+      defaultRunAtLocalTime: String(
+        document.getElementById("settingsDefaultRunAtTime")?.value || "17:40",
+      ),
+      allowedWindowsCsv: String(
+        document.getElementById("settingsAllowedWindowsCsv")?.value || "",
+      ).trim(),
+      nightTargetMinutes:
+        Number(
+          document.getElementById("settingsNightTargetMinutes")?.value || 0,
+        ) || 0,
+      nightJitterMinutes:
+        Number(
+          document.getElementById("settingsNightJitterMinutes")?.value || 0,
+        ) || 0,
     },
     credentials: {
       username: document.getElementById("settingsUsername").value.trim(),
-      password: document.getElementById("settingsPassword").value
+      password: document.getElementById("settingsPassword").value,
     },
     baseUrl: currentSettings?.baseUrl || appConfig?.trainingUrl || "",
     loginUrl: currentSettings?.loginUrl || appConfig?.loginUrl || "",
-    dashboardPort: Number(document.getElementById("settingsDashboardPort").value || 0),
+    dashboardPort: Number(
+      document.getElementById("settingsDashboardPort").value || 0,
+    ),
     headless: document.getElementById("settingsHeadless").value === "true",
     slowMo: Number(document.getElementById("settingsSlowMo").value || 0),
     timeoutMs: Number(document.getElementById("settingsTimeoutMs").value || 0),
-    scormSessionMinMinutes: Number(document.getElementById("settingsSessionMinMinutes").value || 0),
-    scormSessionMaxMinutes: Number(document.getElementById("settingsSessionMaxMinutes").value || 0),
-    maxScormSessionMinutes: Number(document.getElementById("settingsSessionMaxMinutes").value || 0),
-    dailyScormLimitMinutes: Number(document.getElementById("settingsDailyLimitMinutes").value || 0)
+    scormSessionMinMinutes: Number(
+      document.getElementById("settingsSessionMinMinutes").value || 0,
+    ),
+    scormSessionMaxMinutes: Number(
+      document.getElementById("settingsSessionMaxMinutes").value || 0,
+    ),
+    maxScormSessionMinutes: Number(
+      document.getElementById("settingsSessionMaxMinutes").value || 0,
+    ),
+    dailyScormLimitMinutes: Number(
+      document.getElementById("settingsDailyLimitMinutes").value || 0,
+    ),
   };
 }
 
@@ -1213,7 +1476,9 @@ function applyUiPreferences(settingsLike) {
   body.classList.toggle("theme-light", lightTheme);
 
   if (simpleMode) {
-    const activeIsHidden = document.querySelector(".nav-btn.nav-active.dev-only");
+    const activeIsHidden = document.querySelector(
+      ".nav-btn.nav-active.dev-only",
+    );
     if (activeIsHidden) {
       document.querySelector('.nav-btn[data-tab="settings"]')?.click();
     }
@@ -1229,12 +1494,22 @@ function setSettingsFeedback(message, isError = false) {
 }
 
 function updateRiskBadges() {
-  const timeoutMs = Number(document.getElementById("settingsTimeoutMs").value || 0);
-  const sessionMinMinutes = Number(document.getElementById("settingsSessionMinMinutes").value || 0);
-  const sessionMaxMinutes = Number(document.getElementById("settingsSessionMaxMinutes").value || 0);
-  const dailyLimit = Number(document.getElementById("settingsDailyLimitMinutes").value || 0);
+  const timeoutMs = Number(
+    document.getElementById("settingsTimeoutMs").value || 0,
+  );
+  const sessionMinMinutes = Number(
+    document.getElementById("settingsSessionMinMinutes").value || 0,
+  );
+  const sessionMaxMinutes = Number(
+    document.getElementById("settingsSessionMaxMinutes").value || 0,
+  );
+  const dailyLimit = Number(
+    document.getElementById("settingsDailyLimitMinutes").value || 0,
+  );
   const slowMo = Number(document.getElementById("settingsSlowMo").value || 0);
-  const port = Number(document.getElementById("settingsDashboardPort").value || 0);
+  const port = Number(
+    document.getElementById("settingsDashboardPort").value || 0,
+  );
 
   const setRisk = (id, level) => {
     const el = document.getElementById(id);
@@ -1243,12 +1518,28 @@ function updateRiskBadges() {
     el.textContent = level;
   };
 
-  setRisk("riskTimeoutMs", timeoutMs < 15000 ? "high" : timeoutMs < 30000 ? "medium" : "low");
-  const sessionMinRisk = sessionMinMinutes < 15 ? "high" : sessionMinMinutes > 60 ? "medium" : "low";
-  const sessionMaxRisk = sessionMaxMinutes < sessionMinMinutes || sessionMaxMinutes > 90 ? "high" : sessionMaxMinutes > 70 ? "medium" : "low";
+  setRisk(
+    "riskTimeoutMs",
+    timeoutMs < 15000 ? "high" : timeoutMs < 30000 ? "medium" : "low",
+  );
+  const sessionMinRisk =
+    sessionMinMinutes < 15 ? "high" : sessionMinMinutes > 60 ? "medium" : "low";
+  const sessionMaxRisk =
+    sessionMaxMinutes < sessionMinMinutes || sessionMaxMinutes > 90
+      ? "high"
+      : sessionMaxMinutes > 70
+        ? "medium"
+        : "low";
   setRisk("riskSessionMinMinutes", sessionMinRisk);
   setRisk("riskSessionMaxMinutes", sessionMaxRisk);
-  setRisk("riskDailyLimit", dailyLimit > 480 || dailyLimit < 120 ? "high" : dailyLimit > 360 ? "medium" : "low");
+  setRisk(
+    "riskDailyLimit",
+    dailyLimit > 480 || dailyLimit < 120
+      ? "high"
+      : dailyLimit > 360
+        ? "medium"
+        : "low",
+  );
   setRisk("riskSlowMo", slowMo > 700 ? "medium" : "low");
   setRisk("riskDashboardPort", port < 1024 || port > 65535 ? "high" : "low");
   const summary = document.getElementById("settingsRiskSummary");
@@ -1257,9 +1548,13 @@ function updateRiskBadges() {
       timeoutMs < 15000 ? "high" : timeoutMs < 30000 ? "medium" : "low",
       sessionMinRisk,
       sessionMaxRisk,
-      dailyLimit > 480 || dailyLimit < 120 ? "high" : dailyLimit > 360 ? "medium" : "low",
+      dailyLimit > 480 || dailyLimit < 120
+        ? "high"
+        : dailyLimit > 360
+          ? "medium"
+          : "low",
       slowMo > 700 ? "medium" : "low",
-      port < 1024 || port > 65535 ? "high" : "low"
+      port < 1024 || port > 65535 ? "high" : "low",
     ];
     const hasHigh = levels.includes("high");
     const hasMedium = levels.includes("medium");
@@ -1277,12 +1572,17 @@ function updateRangeValidationHint() {
   const hint = document.getElementById("rangeValidationHint");
   const autoSwapButton = document.getElementById("autoSwapRangeBtn");
   if (!hint || !autoSwapButton) return;
-  const min = Number(document.getElementById("settingsSessionMinMinutes").value || 0);
-  const max = Number(document.getElementById("settingsSessionMaxMinutes").value || 0);
+  const min = Number(
+    document.getElementById("settingsSessionMinMinutes").value || 0,
+  );
+  const max = Number(
+    document.getElementById("settingsSessionMaxMinutes").value || 0,
+  );
   hint.classList.remove("is-valid", "is-invalid");
   autoSwapButton.classList.remove("range-fix-needed");
   if (min > 0 && max > 0 && min > max) {
-    hint.textContent = "Maximum Minutes must be greater than or equal to Minimum Minutes.";
+    hint.textContent =
+      "Maximum Minutes must be greater than or equal to Minimum Minutes.";
     hint.classList.add("is-invalid");
     autoSwapButton.classList.add("range-fix-needed");
     autoSwapButton.disabled = false;
@@ -1301,7 +1601,9 @@ function autoSwapSessionRange() {
   if (min > max) {
     minInput.value = String(max);
     maxInput.value = String(min);
-    setSettingsFeedback("Minimum and Maximum minutes were fixed automatically.");
+    setSettingsFeedback(
+      "Minimum and Maximum minutes were fixed automatically.",
+    );
   }
   updateRiskBadges();
   renderSettingsPreview();
@@ -1309,22 +1611,51 @@ function autoSwapSessionRange() {
 
 function applyPreset(mode) {
   const presets = {
-    safe: { slowMo: 250, scormSessionMinMinutes: 38, scormSessionMaxMinutes: 41, timeoutMs: 30000, dailyScormLimitMinutes: 350, headless: false },
-    balanced: { slowMo: 250, scormSessionMinMinutes: 30, scormSessionMaxMinutes: 45, timeoutMs: 30000, dailyScormLimitMinutes: 360, headless: false },
-    fast: { slowMo: 80, scormSessionMinMinutes: 35, scormSessionMaxMinutes: 55, timeoutMs: 20000, dailyScormLimitMinutes: 420, headless: true }
+    safe: {
+      slowMo: 250,
+      scormSessionMinMinutes: 38,
+      scormSessionMaxMinutes: 41,
+      timeoutMs: 30000,
+      dailyScormLimitMinutes: 350,
+      headless: false,
+    },
+    balanced: {
+      slowMo: 250,
+      scormSessionMinMinutes: 30,
+      scormSessionMaxMinutes: 45,
+      timeoutMs: 30000,
+      dailyScormLimitMinutes: 360,
+      headless: false,
+    },
+    fast: {
+      slowMo: 80,
+      scormSessionMinMinutes: 35,
+      scormSessionMaxMinutes: 55,
+      timeoutMs: 20000,
+      dailyScormLimitMinutes: 420,
+      headless: true,
+    },
   };
   const preset = presets[mode];
   if (!preset) return;
 
   document.getElementById("settingsSlowMo").value = preset.slowMo;
   document.getElementById("settingsTimeoutMs").value = preset.timeoutMs;
-  document.getElementById("settingsSessionMinMinutes").value = preset.scormSessionMinMinutes;
-  document.getElementById("settingsSessionMaxMinutes").value = preset.scormSessionMaxMinutes;
-  document.getElementById("settingsDailyLimitMinutes").value = preset.dailyScormLimitMinutes;
+  document.getElementById("settingsSessionMinMinutes").value =
+    preset.scormSessionMinMinutes;
+  document.getElementById("settingsSessionMaxMinutes").value =
+    preset.scormSessionMaxMinutes;
+  document.getElementById("settingsDailyLimitMinutes").value =
+    preset.dailyScormLimitMinutes;
   document.getElementById("settingsHeadless").value = String(preset.headless);
   updateRiskBadges();
   renderSettingsPreview();
-  const label = mode === "safe" ? "Recommended (Safe)" : mode === "balanced" ? "Balanced" : "Fast";
+  const label =
+    mode === "safe"
+      ? "Recommended (Safe)"
+      : mode === "balanced"
+        ? "Balanced"
+        : "Fast";
   setSettingsFeedback(`${label} setup applied.`);
   recordUiTelemetry(`preset_${mode}`);
 }
@@ -1403,28 +1734,55 @@ function renderSettingsPreview() {
     }
   };
 
-  pushIfChanged("Username", currentSettings.credentials?.username, next.credentials?.username);
-  pushIfChanged("Dashboard Port", currentSettings.dashboardPort, next.dashboardPort);
+  pushIfChanged(
+    "Username",
+    currentSettings.credentials?.username,
+    next.credentials?.username,
+  );
+  pushIfChanged(
+    "Dashboard Port",
+    currentSettings.dashboardPort,
+    next.dashboardPort,
+  );
   pushIfChanged("Headless", currentSettings.headless, next.headless);
   pushIfChanged("Slow Mo", currentSettings.slowMo, next.slowMo);
   pushIfChanged("Timeout", currentSettings.timeoutMs, next.timeoutMs);
-  pushIfChanged("Session Min Minutes", currentSettings.scormSessionMinMinutes, next.scormSessionMinMinutes);
-  pushIfChanged("Session Max Minutes", currentSettings.scormSessionMaxMinutes, next.scormSessionMaxMinutes);
-  pushIfChanged("Daily Limit", currentSettings.dailyScormLimitMinutes, next.dailyScormLimitMinutes);
+  pushIfChanged(
+    "Session Min Minutes",
+    currentSettings.scormSessionMinMinutes,
+    next.scormSessionMinMinutes,
+  );
+  pushIfChanged(
+    "Session Max Minutes",
+    currentSettings.scormSessionMaxMinutes,
+    next.scormSessionMaxMinutes,
+  );
+  pushIfChanged(
+    "Daily Limit",
+    currentSettings.dailyScormLimitMinutes,
+    next.dailyScormLimitMinutes,
+  );
   pushIfChanged(
     "Direct Course Mode",
     Boolean(currentSettings.featureFlags?.navigation?.directCourseMode),
-    Boolean(next.featureFlags?.navigation?.directCourseMode)
+    Boolean(next.featureFlags?.navigation?.directCourseMode),
   );
-  if ((next.credentials?.password || "") !== (currentSettings.credentials?.password || "")) {
+  if (
+    (next.credentials?.password || "") !==
+    (currentSettings.credentials?.password || "")
+  ) {
     changes.push("Password: changed");
   }
 
   preview.innerHTML =
-    changes.length > 0 ? changes.map((line) => `<div>${line}</div>`).join("") : "<div>No unsaved changes.</div>";
+    changes.length > 0
+      ? changes.map((line) => `<div>${line}</div>`).join("")
+      : "<div>No unsaved changes.</div>";
   preview.classList.toggle("hidden-preview", !settingsPreviewExpanded);
   if (previewBtn) {
-    previewBtn.textContent = settingsPreviewExpanded ? "Hide Change Details" : "Show Change Details";
+    previewBtn.textContent = settingsPreviewExpanded
+      ? "Hide Change Details"
+      : "Show Change Details";
   }
   const safetyWarning = document.getElementById("settingsSafetyWarning");
   if (safetyWarning) {
@@ -1452,13 +1810,19 @@ function classifyLog(log) {
   }
   if (
     event.includes("webview_console_message") &&
-    (message.includes("server timeout elapsed without receiving a message from the server") ||
+    (message.includes(
+      "server timeout elapsed without receiving a message from the server",
+    ) ||
       message.includes("websocket connected to wss://") ||
       message.includes("normalizing '_blazor'"))
   ) {
     return { severity: "info", group: "system" };
   }
-  if (event.includes("error") || event.includes("failed") || message.includes("error")) {
+  if (
+    event.includes("error") ||
+    event.includes("failed") ||
+    message.includes("error")
+  ) {
     return { severity: "error", group: "errors" };
   }
   if (event.includes("login") || event.includes("auth")) {
@@ -1481,7 +1845,7 @@ function createValidationWarnings(candidate = getSettingsFromForm()) {
       text: "Username or password is missing.",
       fix: () => {
         document.getElementById("settingsUsername").focus();
-      }
+      },
     });
   }
   if (candidate.timeoutMs < 15000) {
@@ -1490,17 +1854,20 @@ function createValidationWarnings(candidate = getSettingsFromForm()) {
       text: "Page Wait Time is very low and may cause failures.",
       fix: () => {
         document.getElementById("settingsTimeoutMs").value = 30000;
-      }
+      },
     });
   }
-  if (candidate.scormSessionMinMinutes <= 0 || candidate.scormSessionMaxMinutes <= 0) {
+  if (
+    candidate.scormSessionMinMinutes <= 0 ||
+    candidate.scormSessionMaxMinutes <= 0
+  ) {
     warnings.push({
       id: "session-range-positive",
       text: "Minimum and Maximum Minutes must be above zero.",
       fix: () => {
         document.getElementById("settingsSessionMinMinutes").value = 30;
         document.getElementById("settingsSessionMaxMinutes").value = 45;
-      }
+      },
     });
   }
   if (candidate.scormSessionMaxMinutes < candidate.scormSessionMinMinutes) {
@@ -1508,9 +1875,11 @@ function createValidationWarnings(candidate = getSettingsFromForm()) {
       id: "session-range-order",
       text: "Maximum Minutes must be equal to or greater than Minimum Minutes.",
       fix: () => {
-        document.getElementById("settingsSessionMaxMinutes").value =
-          Math.max(candidate.scormSessionMinMinutes || 30, 45);
-      }
+        document.getElementById("settingsSessionMaxMinutes").value = Math.max(
+          candidate.scormSessionMinMinutes || 30,
+          45,
+        );
+      },
     });
   }
   if (candidate.dailyScormLimitMinutes < candidate.scormSessionMinMinutes) {
@@ -1520,9 +1889,9 @@ function createValidationWarnings(candidate = getSettingsFromForm()) {
       fix: () => {
         document.getElementById("settingsDailyLimitMinutes").value = Math.max(
           candidate.scormSessionMinMinutes,
-          120
+          120,
         );
-      }
+      },
     });
   }
   if (candidate.dashboardPort < 1024 || candidate.dashboardPort > 65535) {
@@ -1531,7 +1900,7 @@ function createValidationWarnings(candidate = getSettingsFromForm()) {
       text: "Dashboard Port should be between 1024 and 65535.",
       fix: () => {
         document.getElementById("settingsDashboardPort").value = 3030;
-      }
+      },
     });
   }
   return warnings;
@@ -1547,20 +1916,25 @@ function renderValidationAssistant() {
   }
   const visibleWarnings = warnings.slice(0, 2);
 
-  root.innerHTML = visibleWarnings
-    .map(
-      (warning, index) => `
+  root.innerHTML =
+    visibleWarnings
+      .map(
+        (warning, index) => `
       <div class="assistant-item">
         <div>${warning.text}</div>
         <button class="control-btn" type="button" data-fix-index="${index}">Apply fix</button>
       </div>
-    `
-    )
-    .join("") + (warnings.length > 2 ? `<div class="muted">+${warnings.length - 2} more checks not shown.</div>` : "");
+    `,
+      )
+      .join("") +
+    (warnings.length > 2
+      ? `<div class="muted">+${warnings.length - 2} more checks not shown.</div>`
+      : "");
 
   Array.from(root.querySelectorAll("[data-fix-index]")).forEach((btn) => {
     btn.addEventListener("click", () => {
-      const warning = visibleWarnings[Number(btn.getAttribute("data-fix-index"))];
+      const warning =
+        visibleWarnings[Number(btn.getAttribute("data-fix-index"))];
       warning.fix();
       updateRiskBadges();
       renderSettingsPreview();
@@ -1572,7 +1946,9 @@ function renderValidationAssistant() {
 
 function exportCurrentLogs() {
   const format = document.getElementById("exportFormat")?.value || "json";
-  const filteredOnly = Boolean(document.getElementById("exportFilteredOnly")?.checked);
+  const filteredOnly = Boolean(
+    document.getElementById("exportFilteredOnly")?.checked,
+  );
   const logsToExport = filteredOnly ? getFilteredLogs(fullLogs) : fullLogs;
   const output =
     format === "jsonl"
@@ -1583,10 +1959,10 @@ function exportCurrentLogs() {
             format,
             filteredOnly,
             logCount: logsToExport.length,
-            logs: logsToExport
+            logs: logsToExport,
           },
           null,
-          2
+          2,
         );
   const extension = format === "jsonl" ? "jsonl" : "json";
   const mime = format === "jsonl" ? "text/plain" : "application/json";
@@ -1616,7 +1992,9 @@ async function exportSupportBundle() {
   anchor.click();
   document.body.removeChild(anchor);
   URL.revokeObjectURL(url);
-  await appendLog("support_bundle_exported", { bundleVersion: bundle.bundleVersion || 1 });
+  await appendLog("support_bundle_exported", {
+    bundleVersion: bundle.bundleVersion || 1,
+  });
   const button = document.getElementById("exportSupportBundleBtn");
   if (button) {
     const original = button.textContent;
@@ -1664,11 +2042,11 @@ function renderAnalytics(state, analyticsSnapshot = null) {
     dailyRemainingMinutes: Math.max(0, limit - today),
     lessonForecastPct: 0,
     activeStreakDays: today > 0 ? 1 : 0,
-    etaToDailyTargetMinutes: Math.max(0, limit - today)
+    etaToDailyTargetMinutes: Math.max(0, limit - today),
   };
   const metrics = {
     ...fallback,
-    ...(analyticsSnapshot || {})
+    ...(analyticsSnapshot || {}),
   };
   root.innerHTML = `
     <div class="analytics-card"><strong>Daily Completion</strong><div>${metrics.dailyCompletionPct}%</div></div>
@@ -1680,7 +2058,9 @@ function renderAnalytics(state, analyticsSnapshot = null) {
 }
 
 function maybeNotify(message, type) {
-  const notif = currentSettings?.featureFlags?.notifications || DEFAULT_FEATURE_FLAGS.notifications;
+  const notif =
+    currentSettings?.featureFlags?.notifications ||
+    DEFAULT_FEATURE_FLAGS.notifications;
   if (!notif.enabled) return;
   if (type === "startStop" && !notif.startStop) return;
   if (type === "errors" && !notif.errors) return;
@@ -1688,7 +2068,10 @@ function maybeNotify(message, type) {
   if (type === "validation" && !notif.validation) return;
   const now = Date.now();
   const lastTs = notificationCooldownByType[type] || 0;
-  const hashKey = `${type}:${String(message || "").toLowerCase().replace(/\s+/g, " ").trim()}`;
+  const hashKey = `${type}:${String(message || "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim()}`;
   const lastHashTs = notificationCooldownByHash[hashKey] || 0;
   if (now - lastTs < NOTIFICATION_COOLDOWN_MS) {
     return;
@@ -1715,7 +2098,7 @@ function maybeNotify(message, type) {
 
 function shouldSkipWebviewConsoleMessage(rawMessage) {
   const verboseWebviewConsole = Boolean(
-    currentSettings?.featureFlags?.logging?.verboseWebviewConsole
+    currentSettings?.featureFlags?.logging?.verboseWebviewConsole,
   );
   if (verboseWebviewConsole) {
     return false;
@@ -1725,7 +2108,8 @@ function shouldSkipWebviewConsoleMessage(rawMessage) {
 
   // Drop expected noisy framework reconnect chatter entirely.
   const isTransientFrameworkNoise =
-    normalized.includes("normalizing '_blazor'") || normalized.includes("websocket connected to wss://");
+    normalized.includes("normalizing '_blazor'") ||
+    normalized.includes("websocket connected to wss://");
   if (isTransientFrameworkNoise) {
     return true;
   }
@@ -1744,7 +2128,9 @@ function getWebviewAbortMetadata(error, fallbackUrl) {
   const err = error || {};
   const cause = error?.cause || null;
   const nestedCause = cause?.cause || null;
-  const message = String(err?.message || cause?.message || nestedCause?.message || "");
+  const message = String(
+    err?.message || cause?.message || nestedCause?.message || "",
+  );
   const loadingUrlMatch = message.match(/loading\s+['"][^'"]+['"]/i);
 
   return {
@@ -1759,7 +2145,7 @@ function getWebviewAbortMetadata(error, fallbackUrl) {
       nestedCause?.url ||
       fallbackUrl ||
       getSafeWebviewUrl() ||
-      null
+      null,
   };
 }
 
@@ -1771,33 +2157,48 @@ function shouldTreatAsExpectedWebviewAbort(errorLike) {
   if (String(details.code || "").toUpperCase() === "ERR_ABORTED") {
     return true;
   }
-  if (String(details.message || "").toUpperCase().includes("ERR_ABORTED")) {
+  if (
+    String(details.message || "")
+      .toUpperCase()
+      .includes("ERR_ABORTED")
+  ) {
     return true;
   }
   return false;
 }
 
 function fillSettingsForm(settings) {
-  document.getElementById("settingsUsername").value = settings.credentials?.username || "";
-  document.getElementById("settingsPassword").value = settings.credentials?.password || "";
-  document.getElementById("settingsDashboardPort").value = settings.dashboardPort ?? "";
-  document.getElementById("settingsHeadless").value = String(Boolean(settings.headless));
+  document.getElementById("settingsUsername").value =
+    settings.credentials?.username || "";
+  document.getElementById("settingsPassword").value =
+    settings.credentials?.password || "";
+  document.getElementById("settingsDashboardPort").value =
+    settings.dashboardPort ?? "";
+  document.getElementById("settingsHeadless").value = String(
+    Boolean(settings.headless),
+  );
   document.getElementById("settingsSlowMo").value = settings.slowMo ?? "";
   document.getElementById("settingsTimeoutMs").value = settings.timeoutMs ?? "";
   document.getElementById("settingsSessionMinMinutes").value =
     settings.scormSessionMinMinutes ?? settings.maxScormSessionMinutes ?? "";
   document.getElementById("settingsSessionMaxMinutes").value =
     settings.scormSessionMaxMinutes ?? settings.maxScormSessionMinutes ?? "";
-  document.getElementById("settingsDailyLimitMinutes").value = settings.dailyScormLimitMinutes ?? "";
-  const notif = settings.featureFlags?.notifications || DEFAULT_FEATURE_FLAGS.notifications;
-  const loggingFlags = settings.featureFlags?.logging || DEFAULT_FEATURE_FLAGS.logging;
+  document.getElementById("settingsDailyLimitMinutes").value =
+    settings.dailyScormLimitMinutes ?? "";
+  const notif =
+    settings.featureFlags?.notifications || DEFAULT_FEATURE_FLAGS.notifications;
+  const loggingFlags =
+    settings.featureFlags?.logging || DEFAULT_FEATURE_FLAGS.logging;
   const uiFlags = settings.featureFlags?.ui || DEFAULT_FEATURE_FLAGS.ui;
-  const navigationFlags = settings.featureFlags?.navigation || DEFAULT_FEATURE_FLAGS.navigation;
+  const navigationFlags =
+    settings.featureFlags?.navigation || DEFAULT_FEATURE_FLAGS.navigation;
   document.getElementById("notifEnabled").checked = Boolean(notif.enabled);
   document.getElementById("notifStartStop").checked = Boolean(notif.startStop);
   document.getElementById("notifErrors").checked = Boolean(notif.errors);
   document.getElementById("notifLimits").checked = Boolean(notif.limits);
-  document.getElementById("notifValidation").checked = Boolean(notif.validation);
+  document.getElementById("notifValidation").checked = Boolean(
+    notif.validation,
+  );
   const discordEnabled = document.getElementById("notifDiscordEnabled");
   if (discordEnabled) {
     discordEnabled.checked = Boolean(notif.discordWebhookEnabled);
@@ -1810,37 +2211,70 @@ function fillSettingsForm(settings) {
   if (discordVerboseEl) {
     discordVerboseEl.checked = Boolean(notif.discordVerbose);
   }
-  const discordVerboseFlushEl = document.getElementById("notifDiscordVerboseFlushSeconds");
+  const discordVerboseFlushEl = document.getElementById(
+    "notifDiscordVerboseFlushSeconds",
+  );
   if (discordVerboseFlushEl) {
-    discordVerboseFlushEl.value = String(Number(notif.discordVerboseFlushSeconds || 20));
+    discordVerboseFlushEl.value = String(
+      Number(notif.discordVerboseFlushSeconds || 20),
+    );
   }
-  document.getElementById("verboseWebviewConsole").checked = Boolean(loggingFlags.verboseWebviewConsole);
-  document.getElementById("settingsSimpleMode").checked = Boolean(uiFlags.simpleMode);
-  document.getElementById("settingsLightTheme").checked = Boolean(uiFlags.lightTheme);
-  document.getElementById("settingsDirectCourseMode").checked = Boolean(navigationFlags.directCourseMode);
-  const defaultRunAtTimeInput = document.getElementById("settingsDefaultRunAtTime");
+  document.getElementById("verboseWebviewConsole").checked = Boolean(
+    loggingFlags.verboseWebviewConsole,
+  );
+  document.getElementById("settingsSimpleMode").checked = Boolean(
+    uiFlags.simpleMode,
+  );
+  document.getElementById("settingsLightTheme").checked = Boolean(
+    uiFlags.lightTheme,
+  );
+  document.getElementById("settingsDirectCourseMode").checked = Boolean(
+    navigationFlags.directCourseMode,
+  );
+  const defaultRunAtTimeInput = document.getElementById(
+    "settingsDefaultRunAtTime",
+  );
   if (defaultRunAtTimeInput) {
-    defaultRunAtTimeInput.value = settings.scheduler?.defaultRunAtLocalTime || "17:40";
+    defaultRunAtTimeInput.value =
+      settings.scheduler?.defaultRunAtLocalTime || "17:40";
   }
-  const allowedWindowsInput = document.getElementById("settingsAllowedWindowsCsv");
+  const allowedWindowsInput = document.getElementById(
+    "settingsAllowedWindowsCsv",
+  );
   if (allowedWindowsInput) {
     allowedWindowsInput.value = settings.scheduler?.allowedWindowsCsv || "";
   }
-  const nightTargetInput = document.getElementById("settingsNightTargetMinutes");
+  const nightTargetInput = document.getElementById(
+    "settingsNightTargetMinutes",
+  );
   if (nightTargetInput) {
     nightTargetInput.value = settings.scheduler?.nightTargetMinutes ?? "";
   }
-  const nightJitterInput = document.getElementById("settingsNightJitterMinutes");
+  const nightJitterInput = document.getElementById(
+    "settingsNightJitterMinutes",
+  );
   if (nightJitterInput) {
     nightJitterInput.value = settings.scheduler?.nightJitterMinutes ?? "";
   }
 
   // Mirror scheduler settings onto the Automation tab panel.
-  const dailyLimitMirror = document.getElementById("automationDailyLimitMinutes");
+  const dailyLimitMirror = document.getElementById(
+    "automationDailyLimitMinutes",
+  );
   if (dailyLimitMirror) {
     dailyLimitMirror.value = settings.dailyScormLimitMinutes ?? "";
   }
   const windowsCsv = String(settings.scheduler?.allowedWindowsCsv || "").trim();
+  const schedulerEnabled =
+    typeof settings.scheduler?.enabled === "boolean"
+      ? settings.scheduler.enabled
+      : windowsCsv.length > 0;
+  const schedulerEnabledCheckbox = document.getElementById(
+    "automationSchedulerEnabled",
+  );
+  if (schedulerEnabledCheckbox) {
+    schedulerEnabledCheckbox.checked = schedulerEnabled;
+  }
   const windows = windowsCsv
     ? windowsCsv
         .split(",")
@@ -1849,8 +2283,12 @@ function fillSettingsForm(settings) {
         .slice(0, 2)
     : [];
   const [night, evening] = windows;
-  const [nightStart, nightEnd] = night ? night.split("-").map((v) => v.trim()) : ["00:00", "02:00"];
-  const [eveningStart, eveningEnd] = evening ? evening.split("-").map((v) => v.trim()) : ["17:00", "21:00"];
+  const [nightStart, nightEnd] = night
+    ? night.split("-").map((v) => v.trim())
+    : ["00:00", "02:00"];
+  const [eveningStart, eveningEnd] = evening
+    ? evening.split("-").map((v) => v.trim())
+    : ["17:00", "21:00"];
   const nightStartEl = document.getElementById("automationNightStart");
   const nightEndEl = document.getElementById("automationNightEnd");
   const eveningStartEl = document.getElementById("automationEveningStart");
@@ -1859,16 +2297,24 @@ function fillSettingsForm(settings) {
   if (nightEndEl && nightEnd) nightEndEl.value = nightEnd;
   if (eveningStartEl && eveningStart) eveningStartEl.value = eveningStart;
   if (eveningEndEl && eveningEnd) eveningEndEl.value = eveningEnd;
-  const automationNightTarget = document.getElementById("automationNightTargetMinutes");
+  const automationNightTarget = document.getElementById(
+    "automationNightTargetMinutes",
+  );
   if (automationNightTarget) {
-    const fallback = Number.isFinite(Number(settings.scheduler?.nightTargetMinutes))
+    const fallback = Number.isFinite(
+      Number(settings.scheduler?.nightTargetMinutes),
+    )
       ? Number(settings.scheduler?.nightTargetMinutes)
       : 120;
     automationNightTarget.value = String(fallback);
   }
-  const automationNightJitter = document.getElementById("automationNightJitterMinutes");
+  const automationNightJitter = document.getElementById(
+    "automationNightJitterMinutes",
+  );
   if (automationNightJitter) {
-    const fallback = Number.isFinite(Number(settings.scheduler?.nightJitterMinutes))
+    const fallback = Number.isFinite(
+      Number(settings.scheduler?.nightJitterMinutes),
+    )
       ? Number(settings.scheduler?.nightJitterMinutes)
       : 15;
     automationNightJitter.value = String(fallback);
@@ -1880,13 +2326,15 @@ function fillSettingsForm(settings) {
 }
 
 function wireTabNavigation() {
-  const navButtons = Array.from(document.querySelectorAll(".nav-btn[data-tab]"));
+  const navButtons = Array.from(
+    document.querySelectorAll(".nav-btn[data-tab]"),
+  );
   const views = {
     dashboard: document.getElementById("view-dashboard"),
     automation: document.getElementById("view-automation"),
     settings: document.getElementById("view-settings"),
     logs: document.getElementById("view-logs"),
-    onboarding: document.getElementById("view-onboarding")
+    onboarding: document.getElementById("view-onboarding"),
   };
 
   const activate = (tab) => {
@@ -1915,8 +2363,8 @@ function getOnboardingState() {
         checklist: {
           savedSettings: false,
           testedLogin: false,
-          startedAutomation: false
-        }
+          startedAutomation: false,
+        },
       };
     }
     return JSON.parse(raw);
@@ -1926,8 +2374,8 @@ function getOnboardingState() {
       checklist: {
         savedSettings: false,
         testedLogin: false,
-        startedAutomation: false
-      }
+        startedAutomation: false,
+      },
     };
   }
 }
@@ -1945,8 +2393,14 @@ function renderOnboarding() {
   if (!root || !changesRoot) return;
   const items = [
     { id: "savedSettings", label: "Validate and save your settings." },
-    { id: "testedLogin", label: "Run Test Login Only to verify credentials/network." },
-    { id: "startedAutomation", label: "Start automation and verify diagnostics update." }
+    {
+      id: "testedLogin",
+      label: "Run Test Login Only to verify credentials/network.",
+    },
+    {
+      id: "startedAutomation",
+      label: "Start automation and verify diagnostics update.",
+    },
   ];
   root.innerHTML = items
     .map((item) => {
@@ -2030,7 +2484,9 @@ function showTooltip(target, helpKey) {
 }
 
 function wireHelpSystem() {
-  const triggers = Array.from(document.querySelectorAll(".help-trigger[data-help-key]"));
+  const triggers = Array.from(
+    document.querySelectorAll(".help-trigger[data-help-key]"),
+  );
   const closeButton = document.getElementById("closeHelpPanelBtn");
 
   for (const trigger of triggers) {
@@ -2073,17 +2529,17 @@ async function loadSettingsIntoUi() {
       ...(payload.settings.featureFlags || {}),
       notifications: {
         ...DEFAULT_FEATURE_FLAGS.notifications,
-        ...(payload.settings.featureFlags?.notifications || {})
+        ...(payload.settings.featureFlags?.notifications || {}),
       },
       logging: {
         ...DEFAULT_FEATURE_FLAGS.logging,
-        ...(payload.settings.featureFlags?.logging || {})
+        ...(payload.settings.featureFlags?.logging || {}),
       },
       ui: {
         ...DEFAULT_FEATURE_FLAGS.ui,
-        ...(payload.settings.featureFlags?.ui || {})
-      }
-    }
+        ...(payload.settings.featureFlags?.ui || {}),
+      },
+    },
   };
   fillSettingsForm(currentSettings);
 }
@@ -2091,12 +2547,18 @@ async function loadSettingsIntoUi() {
 async function handleSaveSettings() {
   const candidate = getSettingsFromForm();
   if (candidate.scormSessionMinMinutes > candidate.scormSessionMaxMinutes) {
-    setSettingsFeedback("Minimum Minutes must be less than or equal to Maximum Minutes.", true);
+    setSettingsFeedback(
+      "Minimum Minutes must be less than or equal to Maximum Minutes.",
+      true,
+    );
     return null;
   }
   const result = await window.desktopApi.saveSettings(candidate);
   if (!result.ok) {
-    setSettingsFeedback((result.errors || ["Failed to save settings."]).join(" "), true);
+    setSettingsFeedback(
+      (result.errors || ["Failed to save settings."]).join(" "),
+      true,
+    );
     return null;
   }
 
@@ -2104,17 +2566,22 @@ async function handleSaveSettings() {
   fillSettingsForm(currentSettings);
   appConfig = {
     ...appConfig,
-    directCourseMode: Boolean(currentSettings?.featureFlags?.navigation?.directCourseMode),
+    directCourseMode: Boolean(
+      currentSettings?.featureFlags?.navigation?.directCourseMode,
+    ),
     timeoutMs: currentSettings.timeoutMs,
     scormSessionMinMinutes: currentSettings.scormSessionMinMinutes,
     scormSessionMaxMinutes: currentSettings.scormSessionMaxMinutes,
     dailyScormLimitMinutes: currentSettings.dailyScormLimitMinutes,
-    credentials: currentSettings.credentials
+    credentials: currentSettings.credentials,
   };
   setSettingsFeedback("Settings saved. You can now start a study session.");
   const scheduleTimeInput = document.getElementById("scheduleTimeInput");
   if (scheduleTimeInput) {
-    scheduleTimeInput.value = currentSettings.scheduler?.defaultRunAtLocalTime || scheduleTimeInput.value || "17:40";
+    scheduleTimeInput.value =
+      currentSettings.scheduler?.defaultRunAtLocalTime ||
+      scheduleTimeInput.value ||
+      "17:40";
   }
   updateOnboardingChecklist("savedSettings", true);
   recordUiTelemetry("save_settings");
@@ -2126,8 +2593,14 @@ async function handleTestSettings() {
   if (result.ok) {
     setSettingsFeedback("Great - your settings look ready.");
   } else {
-    maybeNotify("Some settings need attention. Open assistant fixes.", "validation");
-    setSettingsFeedback((result.errors || ["Some settings need attention."]).join(" "), true);
+    maybeNotify(
+      "Some settings need attention. Open assistant fixes.",
+      "validation",
+    );
+    setSettingsFeedback(
+      (result.errors || ["Some settings need attention."]).join(" "),
+      true,
+    );
   }
   renderValidationAssistant();
   recordUiTelemetry("test_settings");
@@ -2135,9 +2608,13 @@ async function handleTestSettings() {
 
 async function handleTestLoginOnly() {
   try {
-    const backendResult = await window.desktopApi.testLoginOnly(getSettingsFromForm());
+    const backendResult = await window.desktopApi.testLoginOnly(
+      getSettingsFromForm(),
+    );
     if (!backendResult.ok) {
-      throw new Error(backendResult.message || "Backend login-only test failed.");
+      throw new Error(
+        backendResult.message || "Backend login-only test failed.",
+      );
     }
     await waitForWebviewReady();
     await loadUrl(appConfig.loginUrl);
@@ -2150,19 +2627,28 @@ async function handleTestLoginOnly() {
       {
         timeoutMs: appConfig.timeoutMs,
         intervalMs: 500,
-        errorMessage: "Embedded login-only test stayed on login page."
-      }
+        errorMessage: "Embedded login-only test stayed on login page.",
+      },
     );
-    await appendLog("embedded_login_only_passed", { url: getSafeWebviewUrl() || null });
-    setSettingsFeedback(`Login-only test passed (${getSafeWebviewUrl() || backendResult.url || "-"})`);
+    await appendLog("embedded_login_only_passed", {
+      url: getSafeWebviewUrl() || null,
+    });
+    setSettingsFeedback(
+      `Login-only test passed (${getSafeWebviewUrl() || backendResult.url || "-"})`,
+    );
     maybeNotify("Login-only test passed.", "validation");
     updateOnboardingChecklist("testedLogin", true);
     recordUiTelemetry("test_login_only");
     return;
   } catch (error) {
-    setSettingsFeedback(`Login-only test failed: ${error.message || "Unknown error."}`, true);
+    setSettingsFeedback(
+      `Login-only test failed: ${error.message || "Unknown error."}`,
+      true,
+    );
     maybeNotify("Login-only test failed.", "errors");
-    await appendLog("embedded_login_only_failed", { message: error.message || "Unknown error." });
+    await appendLog("embedded_login_only_failed", {
+      message: error.message || "Unknown error.",
+    });
     recordUiTelemetry("test_login_only_failed", "login_failed");
   }
 }
@@ -2186,7 +2672,7 @@ async function recordRendererError(eventName, errorLike) {
 
   await window.desktopApi.appendLog({
     event: eventName,
-    message
+    message,
   });
 }
 
@@ -2209,7 +2695,9 @@ async function loadUrl(url) {
     const currentUrl = getSafeWebviewUrl();
     const normalizedTargetUrl = normalizeUrl(targetUrl);
     const normalizedCurrentUrl = normalizeUrl(currentUrl);
-    const normalizedLastRequestedUrl = normalizeUrl(embeddedAutomation.lastRequestedUrl);
+    const normalizedLastRequestedUrl = normalizeUrl(
+      embeddedAutomation.lastRequestedUrl,
+    );
 
     if (!targetUrl) {
       embeddedAutomation.lastRequestedUrl = null;
@@ -2220,7 +2708,8 @@ async function loadUrl(url) {
 
     if (
       normalizedTargetUrl &&
-      (normalizedTargetUrl === normalizedCurrentUrl || normalizedTargetUrl === normalizedLastRequestedUrl)
+      (normalizedTargetUrl === normalizedCurrentUrl ||
+        normalizedTargetUrl === normalizedLastRequestedUrl)
     ) {
       syncEmbeddedUrl();
       if (!embeddedAutomation.webviewReady) {
@@ -2267,11 +2756,28 @@ async function clickWebviewAt(x, y) {
     webview.focus();
   }
   await delay(20);
-  webview.sendInputEvent({ type: "mouseMove", x: clickX, y: clickY, button: "left" });
+  webview.sendInputEvent({
+    type: "mouseMove",
+    x: clickX,
+    y: clickY,
+    button: "left",
+  });
   await delay(20);
-  webview.sendInputEvent({ type: "mouseDown", x: clickX, y: clickY, button: "left", clickCount: 1 });
+  webview.sendInputEvent({
+    type: "mouseDown",
+    x: clickX,
+    y: clickY,
+    button: "left",
+    clickCount: 1,
+  });
   await delay(30);
-  webview.sendInputEvent({ type: "mouseUp", x: clickX, y: clickY, button: "left", clickCount: 1 });
+  webview.sendInputEvent({
+    type: "mouseUp",
+    x: clickX,
+    y: clickY,
+    button: "left",
+    clickCount: 1,
+  });
   return true;
 }
 
@@ -2307,7 +2813,7 @@ async function applyRandomPreClickDelay(phase, extra = {}) {
     delayMs,
     delaySeconds: Number((delayMs / 1000).toFixed(1)),
     ...extra,
-    url: getSafeWebviewUrl() || null
+    url: getSafeWebviewUrl() || null,
   });
   await waitInterruptible(delayMs, 100);
   return delayMs;
@@ -2330,7 +2836,7 @@ const OPEN_COURSES_BUTTON_SELECTORS = [
   '[role="button"][title*="Open"]',
   '[role="button"][aria-label*="Open"]',
   '[role="button"][title*="μάθη"]',
-  '[role="button"][aria-label*="μάθη"]'
+  '[role="button"][aria-label*="μάθη"]',
 ];
 
 const OPEN_COURSES_TEXT_HINTS = [
@@ -2343,17 +2849,19 @@ const OPEN_COURSES_TEXT_HINTS = [
   "άνοιγμα μαθημάτων",
   "ανοιγμα μαθηματων",
   "μαθήματα",
-  "μαθηματα"
+  "μαθηματα",
 ];
 
 const ELEARNING_URL_PATTERNS = [
   /https:\/\/elearning\.golearn\.gr\/local\/mdl_autologin\/autologin\.php/i,
   /https:\/\/elearning\.golearn\.gr\/$/i,
-  /https:\/\/elearning\.golearn\.gr\/my\/?$/i
+  /https:\/\/elearning\.golearn\.gr\/my\/?$/i,
 ];
 
 function isCourseUrl(url) {
-  return /https:\/\/elearning\.golearn\.gr\/course\/view\.php\?id=7378/i.test(url || "");
+  return /https:\/\/elearning\.golearn\.gr\/course\/view\.php\?id=7378/i.test(
+    url || "",
+  );
 }
 
 function isElearningLandingUrl(url) {
@@ -2364,7 +2872,9 @@ function isElearningLandingUrl(url) {
 }
 
 function isAutologinBridgeUrl(url) {
-  return /https:\/\/elearning\.golearn\.gr\/local\/mdl_autologin\/autologin\.php/i.test(url || "");
+  return /https:\/\/elearning\.golearn\.gr\/local\/mdl_autologin\/autologin\.php/i.test(
+    url || "",
+  );
 }
 
 function isMoodleLoginUrl(url) {
@@ -2372,7 +2882,10 @@ function isMoodleLoginUrl(url) {
 }
 
 function getElearningAutologinUrl() {
-  return String(appConfig?.elearningAutologinUrl || "https://elearning.golearn.gr/local/mdl_autologin/autologin.php");
+  return String(
+    appConfig?.elearningAutologinUrl ||
+      "https://elearning.golearn.gr/local/mdl_autologin/autologin.php",
+  );
 }
 
 async function openCourseViaElearningAutologin() {
@@ -2393,13 +2906,17 @@ async function openCourseViaElearningAutologin() {
       attempt,
       phase: "bridge_probe",
       fromUrl: getSafeWebviewUrl() || null,
-      targetUrl: bridgeUrl
+      targetUrl: bridgeUrl,
     });
     await loadUrl(bridgeUrl);
     await waitForCondition(
       async () => {
         const currentUrl = getSafeWebviewUrl() || "";
-        if (isCourseUrl(currentUrl) || isElearningLandingUrl(currentUrl) || isMoodleLoginUrl(currentUrl)) {
+        if (
+          isCourseUrl(currentUrl) ||
+          isElearningLandingUrl(currentUrl) ||
+          isMoodleLoginUrl(currentUrl)
+        ) {
           return currentUrl;
         }
         return null;
@@ -2407,14 +2924,14 @@ async function openCourseViaElearningAutologin() {
       {
         timeoutMs: Math.min(appConfig.timeoutMs, 8_000),
         intervalMs: 500,
-        errorMessage: "Autologin bridge probe did not resolve."
-      }
+        errorMessage: "Autologin bridge probe did not resolve.",
+      },
     ).catch(async (error) => {
       await appendLog("elearning_probe_stalled", {
         attempt,
         phase: "bridge_probe",
         message: error.message || "autologin_bridge_probe_timeout",
-        url: getSafeWebviewUrl() || null
+        url: getSafeWebviewUrl() || null,
       });
       return null;
     });
@@ -2425,7 +2942,7 @@ async function openCourseViaElearningAutologin() {
       phase: "bridge_probe",
       fromUrl: bridgeUrl,
       toUrl: lastUrl,
-      elapsedMs: Date.now() - attemptStartedAt
+      elapsedMs: Date.now() - attemptStartedAt,
     });
     if (isCourseUrl(lastUrl)) {
       return;
@@ -2436,7 +2953,7 @@ async function openCourseViaElearningAutologin() {
         phase: "bridge_probe",
         fromUrl: bridgeUrl,
         toUrl: lastUrl,
-        elapsedMs: Date.now() - attemptStartedAt
+        elapsedMs: Date.now() - attemptStartedAt,
       });
     }
 
@@ -2444,7 +2961,7 @@ async function openCourseViaElearningAutologin() {
     await appendLog("auth_recovery_step_applied", {
       step: "elearning_my_probe",
       attempt,
-      sourceUrl: getSafeWebviewUrl() || null
+      sourceUrl: getSafeWebviewUrl() || null,
     });
     await loadUrl("https://elearning.golearn.gr/my/");
     await waitForCondition(
@@ -2462,13 +2979,13 @@ async function openCourseViaElearningAutologin() {
       {
         timeoutMs: Math.min(appConfig.timeoutMs, 6_000),
         intervalMs: 500,
-        errorMessage: "Elearning /my probe did not resolve."
-      }
+        errorMessage: "Elearning /my probe did not resolve.",
+      },
     ).catch(async (error) => {
       await appendLog("elearning_probe_stalled", {
         attempt,
         message: error.message || "elearning_my_probe_timeout",
-        url: getSafeWebviewUrl() || null
+        url: getSafeWebviewUrl() || null,
       });
       return null;
     });
@@ -2478,14 +2995,18 @@ async function openCourseViaElearningAutologin() {
       return;
     }
     if (isMoodleLoginUrl(lastUrl)) {
-      await appendLog("moodle_login_wall_detected", { attempt, phase: "my_probe", url: lastUrl });
+      await appendLog("moodle_login_wall_detected", {
+        attempt,
+        phase: "my_probe",
+        url: lastUrl,
+      });
     }
 
     assertRecoveryBudget();
     await appendLog("auth_recovery_step_applied", {
       step: "open_course_direct",
       attempt,
-      sourceUrl: getSafeWebviewUrl() || null
+      sourceUrl: getSafeWebviewUrl() || null,
     });
     await loadUrl(appConfig.courseUrl);
     await waitForCondition(
@@ -2499,8 +3020,8 @@ async function openCourseViaElearningAutologin() {
       {
         timeoutMs: Math.min(appConfig.timeoutMs, 8_000),
         intervalMs: 500,
-        errorMessage: "Direct course open did not resolve."
-      }
+        errorMessage: "Direct course open did not resolve.",
+      },
     ).catch(() => null);
 
     lastUrl = getSafeWebviewUrl() || null;
@@ -2508,7 +3029,11 @@ async function openCourseViaElearningAutologin() {
       return;
     }
     if (isMoodleLoginUrl(lastUrl)) {
-      await appendLog("moodle_login_wall_detected", { attempt, phase: "course_direct", url: lastUrl });
+      await appendLog("moodle_login_wall_detected", {
+        attempt,
+        phase: "course_direct",
+        url: lastUrl,
+      });
     }
 
     if (attempt === 1 && isMoodleLoginUrl(lastUrl)) {
@@ -2516,7 +3041,7 @@ async function openCourseViaElearningAutologin() {
       await appendLog("auth_recovery_step_applied", {
         step: "reauth_edu",
         attempt,
-        sourceUrl: getSafeWebviewUrl() || null
+        sourceUrl: getSafeWebviewUrl() || null,
       });
       await loadUrl(appConfig.loginUrl);
       await fillLoginForm();
@@ -2528,8 +3053,8 @@ async function openCourseViaElearningAutologin() {
         {
           timeoutMs: Math.min(appConfig.timeoutMs, 12_000),
           intervalMs: 500,
-          errorMessage: "Edu re-auth did not leave login page."
-        }
+          errorMessage: "Edu re-auth did not leave login page.",
+        },
       );
     }
   }
@@ -2537,10 +3062,13 @@ async function openCourseViaElearningAutologin() {
   await appendLog("auth_recovery_step_applied", {
     step: "retry_training_button",
     attempt: 3,
-    sourceUrl: getSafeWebviewUrl() || null
+    sourceUrl: getSafeWebviewUrl() || null,
   });
   await loadUrl(appConfig.trainingUrl);
-  await waitForUrlMatch(/\/training\/trainee\/training/i, Math.min(appConfig.timeoutMs, 10_000));
+  await waitForUrlMatch(
+    /\/training\/trainee\/training/i,
+    Math.min(appConfig.timeoutMs, 10_000),
+  );
   await waitForCondition(
     async () =>
       executeInWebview(`
@@ -2569,8 +3097,8 @@ async function openCourseViaElearningAutologin() {
     {
       timeoutMs: Math.min(appConfig.timeoutMs, 6_000),
       intervalMs: 300,
-      errorMessage: "Training retry button did not appear."
-    }
+      errorMessage: "Training retry button did not appear.",
+    },
   );
   const trainingRetryClick = await executeInWebview(`
     (() => {
@@ -2613,21 +3141,33 @@ async function openCourseViaElearningAutologin() {
   `).catch(() => ({ clicked: false, clickX: null, clickY: null }));
   if (trainingRetryClick?.clicked) {
     const retryPoints = [
-      { x: Number(trainingRetryClick.clickX || 0), y: Number(trainingRetryClick.clickY || 0), strategy: "center" },
+      {
+        x: Number(trainingRetryClick.clickX || 0),
+        y: Number(trainingRetryClick.clickY || 0),
+        strategy: "center",
+      },
       {
         x: Number(trainingRetryClick.clickX || 0) + 6,
         y: Number(trainingRetryClick.clickY || 0) + 2,
-        strategy: "offset_plus"
+        strategy: "offset_plus",
       },
       {
         x: Number(trainingRetryClick.clickX || 0) - 6,
         y: Number(trainingRetryClick.clickY || 0) - 2,
-        strategy: "offset_minus"
-      }
-    ].filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y) && point.x > 0 && point.y > 0);
+        strategy: "offset_minus",
+      },
+    ].filter(
+      (point) =>
+        Number.isFinite(point.x) &&
+        Number.isFinite(point.y) &&
+        point.x > 0 &&
+        point.y > 0,
+    );
     for (let idx = 0; idx < retryPoints.length; idx += 1) {
       const point = retryPoints[idx];
-      const hostInputClicked = await clickWebviewAt(point.x, point.y).catch(() => false);
+      const hostInputClicked = await clickWebviewAt(point.x, point.y).catch(
+        () => false,
+      );
       await appendLog("open_courses_host_input_click", {
         attempt: 3,
         hostInputClicked,
@@ -2636,7 +3176,7 @@ async function openCourseViaElearningAutologin() {
         clickStrategy: point.strategy,
         clickAttempt: idx + 1,
         phase: "retry_training_button",
-        url: getSafeWebviewUrl() || null
+        url: getSafeWebviewUrl() || null,
       });
       if (hostInputClicked) {
         await delay(120);
@@ -2645,13 +3185,15 @@ async function openCourseViaElearningAutologin() {
     await waitForCondition(
       async () => {
         const currentUrl = getSafeWebviewUrl() || "";
-        return isCourseUrl(currentUrl) || isElearningLandingUrl(currentUrl) ? currentUrl : null;
+        return isCourseUrl(currentUrl) || isElearningLandingUrl(currentUrl)
+          ? currentUrl
+          : null;
       },
       {
         timeoutMs: Math.min(appConfig.timeoutMs, 8_000),
         intervalMs: 500,
-        errorMessage: "Training button retry did not navigate."
-      }
+        errorMessage: "Training button retry did not navigate.",
+      },
     ).catch(() => null);
     lastUrl = getSafeWebviewUrl() || null;
     if (!isCourseUrl(lastUrl)) {
@@ -2660,21 +3202,23 @@ async function openCourseViaElearningAutologin() {
         attempt: 3,
         phase: "post_training_bridge_probe",
         fromUrl: getSafeWebviewUrl() || null,
-        targetUrl: bridgeRetryUrl
+        targetUrl: bridgeRetryUrl,
       });
       await loadUrl(bridgeRetryUrl);
       await waitForCondition(
         async () => {
           const currentUrl = getSafeWebviewUrl() || "";
-          return isCourseUrl(currentUrl) || isElearningLandingUrl(currentUrl) || isMoodleLoginUrl(currentUrl)
+          return isCourseUrl(currentUrl) ||
+            isElearningLandingUrl(currentUrl) ||
+            isMoodleLoginUrl(currentUrl)
             ? currentUrl
             : null;
         },
         {
           timeoutMs: Math.min(appConfig.timeoutMs, 8_000),
           intervalMs: 500,
-          errorMessage: "Post-training autologin bridge probe did not resolve."
-        }
+          errorMessage: "Post-training autologin bridge probe did not resolve.",
+        },
       ).catch(() => null);
       lastUrl = getSafeWebviewUrl() || null;
       await appendLog("autologin_bridge_resolved", {
@@ -2682,7 +3226,7 @@ async function openCourseViaElearningAutologin() {
         phase: "post_training_bridge_probe",
         fromUrl: bridgeRetryUrl,
         toUrl: lastUrl,
-        elapsedMs: null
+        elapsedMs: null,
       });
       if (isMoodleLoginUrl(lastUrl)) {
         await appendLog("autologin_bridge_login_wall", {
@@ -2690,7 +3234,7 @@ async function openCourseViaElearningAutologin() {
           phase: "post_training_bridge_probe",
           fromUrl: bridgeRetryUrl,
           toUrl: lastUrl,
-          elapsedMs: null
+          elapsedMs: null,
         });
       }
     }
@@ -2699,13 +3243,15 @@ async function openCourseViaElearningAutologin() {
       await waitForCondition(
         async () => {
           const currentUrl = getSafeWebviewUrl() || "";
-          return isCourseUrl(currentUrl) || isMoodleLoginUrl(currentUrl) ? currentUrl : null;
+          return isCourseUrl(currentUrl) || isMoodleLoginUrl(currentUrl)
+            ? currentUrl
+            : null;
         },
         {
           timeoutMs: Math.min(appConfig.timeoutMs, 8_000),
           intervalMs: 500,
-          errorMessage: "Training retry direct course did not resolve."
-        }
+          errorMessage: "Training retry direct course did not resolve.",
+        },
       ).catch(() => null);
       lastUrl = getSafeWebviewUrl() || null;
     }
@@ -2714,7 +3260,9 @@ async function openCourseViaElearningAutologin() {
     }
   }
 
-  throw new Error(`Autologin bridge recovery did not reach course. Last URL: ${lastUrl || "-"}`);
+  throw new Error(
+    `Autologin bridge recovery did not reach course. Last URL: ${lastUrl || "-"}`,
+  );
 }
 
 async function waitForCondition(checkFn, options = {}) {
@@ -2747,8 +3295,8 @@ async function waitForUrlMatch(pattern, timeoutMs = appConfig.timeoutMs) {
       timeoutMs,
       intervalMs: 500,
       allowStopRequested: false,
-      errorMessage: `Timed out waiting for URL ${pattern}`
-    }
+      errorMessage: `Timed out waiting for URL ${pattern}`,
+    },
   );
 }
 
@@ -2759,7 +3307,10 @@ const SCORM_ENTRY_URL_RE = /mod\/scorm\/(view|player)\.php/i;
  * If Moodle sends the user to the login page, throws with code SCORM_LOGIN_REDIRECT
  * so callers can run session recovery instead of waiting the full timeout.
  */
-async function waitForScormUrlWithLoginDetection(timeoutMs = appConfig.timeoutMs, intervalMs = 500) {
+async function waitForScormUrlWithLoginDetection(
+  timeoutMs = appConfig.timeoutMs,
+  intervalMs = 500,
+) {
   const startedAt = Date.now();
   while (Date.now() - startedAt < timeoutMs) {
     throwIfStopped();
@@ -2783,7 +3334,7 @@ async function recoverScormOpenAfterLoginRedirect(targetSection) {
   await appendLog("scorm_open_redirected_to_login", {
     sectionId: targetSection.id,
     lessonUrl: lessonUrl || null,
-    url: getSafeWebviewUrl() || null
+    url: getSafeWebviewUrl() || null,
   });
   if (!lessonUrl) {
     throw new Error("SCORM recovery skipped: missing activity URL.");
@@ -2806,8 +3357,8 @@ async function waitForSelector(selector, timeoutMs = appConfig.timeoutMs) {
     {
       timeoutMs,
       intervalMs: 500,
-      errorMessage: `Timed out waiting for selector ${selector}`
-    }
+      errorMessage: `Timed out waiting for selector ${selector}`,
+    },
   );
 }
 
@@ -2816,11 +3367,11 @@ async function emitPortalDriftWarning(phase, missingSelectors = []) {
   await appendLog("portal_drift_detected", {
     phase,
     missingSelectors,
-    url: getSafeWebviewUrl() || null
+    url: getSafeWebviewUrl() || null,
   });
   await updateRuntimeState(
     { runtimeDiagnostics: { ...runtimeDiagnostics } },
-    `Portal drift detected (${phase})`
+    `Portal drift detected (${phase})`,
   );
 }
 
@@ -2842,14 +3393,14 @@ const SCORM_EXIT_SELECTORS = [
   'a[title*="Έξοδος"]',
   'a[aria-label*="Έξοδος"]',
   'a[href*="/course/view.php?id=7378"]',
-  'a[href*="/course/view.php"]'
+  'a[href*="/course/view.php"]',
 ];
 
 const SCORM_EXIT_TEXT_HINTS = [
   "έξοδος από τη δραστηριότητα",
   "εξοδος απο τη δραστηριοτητα",
   "έξοδος",
-  "εξοδος"
+  "εξοδος",
 ];
 
 async function clickScormExitButton() {
@@ -2903,7 +3454,10 @@ async function clickScormExitButton() {
   `);
 }
 
-async function exitCurrentScormSafely(targetSection = null, reason = "requested_stop") {
+async function exitCurrentScormSafely(
+  targetSection = null,
+  reason = "requested_stop",
+) {
   if (scormExitInFlightPromise) {
     return scormExitInFlightPromise;
   }
@@ -2917,14 +3471,17 @@ async function exitCurrentScormSafely(targetSection = null, reason = "requested_
     await appendLog("scorm_safe_exit_requested", {
       sectionId: targetSection?.id || null,
       reason,
-      url: currentUrl
+      url: currentUrl,
     });
 
     const maxAttempts = 4;
     let selectedSelector = null;
     let clicked = false;
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-      const clickResult = await clickScormExitButton().catch(() => ({ clicked: false, selector: null }));
+      const clickResult = await clickScormExitButton().catch(() => ({
+        clicked: false,
+        selector: null,
+      }));
       clicked = Boolean(clickResult?.clicked);
       selectedSelector = clickResult?.selector || selectedSelector;
       await appendLog("scorm_exit_click_attempt", {
@@ -2934,7 +3491,7 @@ async function exitCurrentScormSafely(targetSection = null, reason = "requested_
         maxAttempts,
         clicked,
         selector: clickResult?.selector || null,
-        url: getSafeWebviewUrl() || null
+        url: getSafeWebviewUrl() || null,
       });
       if (clicked) {
         break;
@@ -2948,13 +3505,13 @@ async function exitCurrentScormSafely(targetSection = null, reason = "requested_
         reason,
         attemptedSelectors: SCORM_EXIT_SELECTORS,
         attemptedTextHints: SCORM_EXIT_TEXT_HINTS,
-        url: getSafeWebviewUrl() || null
+        url: getSafeWebviewUrl() || null,
       });
       await appendLog("system_progress_commit_unconfirmed", {
         sectionId: targetSection?.id || null,
         reason,
         stage: "exit_click_not_found",
-        url: getSafeWebviewUrl() || null
+        url: getSafeWebviewUrl() || null,
       });
       return false;
     }
@@ -2967,17 +3524,24 @@ async function exitCurrentScormSafely(targetSection = null, reason = "requested_
       await waitForCondition(
         async () => {
           const latestUrl = getSafeWebviewUrl() || "";
-          if (targetPattern.test(latestUrl) || isCourseUrl(latestUrl) || isElearningLandingUrl(latestUrl)) {
+          if (
+            targetPattern.test(latestUrl) ||
+            isCourseUrl(latestUrl) ||
+            isElearningLandingUrl(latestUrl)
+          ) {
             return latestUrl;
           }
           return null;
         },
         {
-          timeoutMs: Math.max(6_000, Math.min(appConfig.timeoutMs || 30_000, 20_000)),
+          timeoutMs: Math.max(
+            6_000,
+            Math.min(appConfig.timeoutMs || 30_000, 20_000),
+          ),
           intervalMs: 400,
           allowStopRequested: true,
-          errorMessage: `Timed out waiting for SCORM exit URL ${targetPattern}`
-        }
+          errorMessage: `Timed out waiting for SCORM exit URL ${targetPattern}`,
+        },
       );
     } catch (error) {
       await appendLog("scorm_exit_navigation_retrying_autologin", {
@@ -2985,7 +3549,7 @@ async function exitCurrentScormSafely(targetSection = null, reason = "requested_
         reason,
         selector: selectedSelector,
         message: error?.message || String(error),
-        url: getSafeWebviewUrl() || null
+        url: getSafeWebviewUrl() || null,
       });
 
       await openCourseViaElearningAutologin().catch(async (recoveryError) => {
@@ -2993,19 +3557,22 @@ async function exitCurrentScormSafely(targetSection = null, reason = "requested_
           sectionId: targetSection?.id || null,
           reason,
           message: recoveryError?.message || String(recoveryError),
-          url: getSafeWebviewUrl() || null
+          url: getSafeWebviewUrl() || null,
         });
       });
 
       const afterRecoveryUrl = getSafeWebviewUrl() || "";
-      if (!isCourseUrl(afterRecoveryUrl) && !isElearningLandingUrl(afterRecoveryUrl)) {
+      if (
+        !isCourseUrl(afterRecoveryUrl) &&
+        !isElearningLandingUrl(afterRecoveryUrl)
+      ) {
         await appendLog("system_progress_commit_unconfirmed", {
           sectionId: targetSection?.id || null,
           reason,
           selector: selectedSelector,
           stage: "navigation_confirmation_timeout",
           message: error?.message || String(error),
-          url: afterRecoveryUrl || null
+          url: afterRecoveryUrl || null,
         });
         throw error;
       }
@@ -3015,24 +3582,27 @@ async function exitCurrentScormSafely(targetSection = null, reason = "requested_
       sectionId: targetSection?.id || null,
       reason,
       selector: selectedSelector,
-      url: getSafeWebviewUrl() || null
+      url: getSafeWebviewUrl() || null,
     });
     await appendLog("system_progress_commit_confirmed", {
       sectionId: targetSection?.id || null,
       reason,
       selector: selectedSelector,
-      url: getSafeWebviewUrl() || null
+      url: getSafeWebviewUrl() || null,
     });
 
     await appendLog("scorm_safe_exit_completed", {
       sectionId: targetSection?.id || null,
       reason,
-      url: getSafeWebviewUrl() || null
+      url: getSafeWebviewUrl() || null,
     });
-    await updateRuntimeState({
-      currentUrl: getSafeWebviewUrl() || null,
-      nextPlannedExitAt: null
-    }, "SCORM exited safely");
+    await updateRuntimeState(
+      {
+        currentUrl: getSafeWebviewUrl() || null,
+        nextPlannedExitAt: null,
+      },
+      "SCORM exited safely",
+    );
     return true;
   })();
 
@@ -3089,18 +3659,20 @@ async function ensureTrainingPageLoaded() {
     async () => {
       const currentUrl = getSafeWebviewUrl() || "";
       const loginVisible = await executeInWebview(
-        `(() => Boolean(document.querySelector("#Input_Username") && document.querySelector("#Input_Password")))()`
+        `(() => Boolean(document.querySelector("#Input_Username") && document.querySelector("#Input_Password")))()`,
       ).catch(() => false);
       return /\/login/i.test(currentUrl) || loginVisible ? true : currentUrl;
     },
     {
       timeoutMs: appConfig.timeoutMs,
       intervalMs: 500,
-      errorMessage: "Training page did not finish loading."
-    }
+      errorMessage: "Training page did not finish loading.",
+    },
   );
   if (landedOnLogin === true) {
-    await appendLog("manual_sync_login_required", { url: getSafeWebviewUrl() || null });
+    await appendLog("manual_sync_login_required", {
+      url: getSafeWebviewUrl() || null,
+    });
     await fillLoginForm();
     await waitForCondition(
       async () => {
@@ -3110,8 +3682,8 @@ async function ensureTrainingPageLoaded() {
       {
         timeoutMs: appConfig.timeoutMs,
         intervalMs: 500,
-        errorMessage: "Login did not complete while syncing website stats."
-      }
+        errorMessage: "Login did not complete while syncing website stats.",
+      },
     );
     await loadUrl(appConfig.trainingUrl);
   }
@@ -3163,7 +3735,9 @@ function resolveLessonSectionIdFromStatsRow(row) {
     return null;
   }
   const lessonKey = `E${lessonMatch[1]}`;
-  const lessonConfig = LESSON_SECTION_CONFIG.find((entry) => entry.lessonKey === lessonKey);
+  const lessonConfig = LESSON_SECTION_CONFIG.find(
+    (entry) => entry.lessonKey === lessonKey,
+  );
   return lessonConfig?.id || null;
 }
 
@@ -3177,17 +3751,16 @@ function classifyStatsRow(row) {
 }
 
 async function syncWebsiteStatsToProgress(progressState) {
-  const rows = await waitForCondition(
-    async () => readWebsiteStatsPanel(),
-    {
-      timeoutMs: 15_000,
-      intervalMs: 750,
-      errorMessage: "Async stats panel was not found."
-    }
-  ).catch(() => null);
+  const rows = await waitForCondition(async () => readWebsiteStatsPanel(), {
+    timeoutMs: 15_000,
+    intervalMs: 750,
+    errorMessage: "Async stats panel was not found.",
+  }).catch(() => null);
 
   if (!rows) {
-    await appendLog("website_stats_panel_missing", { url: getSafeWebviewUrl() || null });
+    await appendLog("website_stats_panel_missing", {
+      url: getSafeWebviewUrl() || null,
+    });
     await emitPortalDriftWarning("stats_panel", ["#asyncStatsPanel"]);
     await updateRuntimeState({}, "Website stats panel not found");
     return { synced: 0, missing: true };
@@ -3208,7 +3781,7 @@ async function syncWebsiteStatsToProgress(progressState) {
         reason: "code_not_actionable",
         code: rawCode,
         rowType,
-        row
+        row,
       });
       continue;
     }
@@ -3217,17 +3790,19 @@ async function syncWebsiteStatsToProgress(progressState) {
       skipped += 1;
       await appendLog("website_stats_row_skipped", {
         reason: "section_not_mapped",
-        row
+        row,
       });
       continue;
     }
-    const lessonConfig = LESSON_SECTION_CONFIG.find((entry) => entry.id === sectionId);
+    const lessonConfig = LESSON_SECTION_CONFIG.find(
+      (entry) => entry.id === sectionId,
+    );
     if (!lessonConfig) {
       skipped += 1;
       await appendLog("website_stats_row_skipped", {
         reason: "lesson_config_missing",
         sectionId,
-        row
+        row,
       });
       continue;
     }
@@ -3240,35 +3815,43 @@ async function syncWebsiteStatsToProgress(progressState) {
       await appendLog("website_stats_row_skipped", {
         reason: "invalid_completed_hours",
         sectionId,
-        progressText: row.progressText
+        progressText: row.progressText,
       });
       continue;
     }
-    const targetHours = Number.isFinite(targetHoursParsed) && targetHoursParsed >= 0
-      ? targetHoursParsed
-      : lessonConfig.targetHours;
+    const targetHours =
+      Number.isFinite(targetHoursParsed) && targetHoursParsed >= 0
+        ? targetHoursParsed
+        : lessonConfig.targetHours;
     const completedMinutes = Math.round(completedHours * 60);
     const targetMinutes = Math.round(targetHours * 60);
-    if (completedMinutes < 0 || completedMinutes > 10_000 || targetMinutes > 20_000) {
+    if (
+      completedMinutes < 0 ||
+      completedMinutes > 10_000 ||
+      targetMinutes > 20_000
+    ) {
       skipped += 1;
       await appendLog("website_stats_row_skipped", {
         reason: "minutes_out_of_range",
         sectionId,
         completedMinutes,
-        targetMinutes
+        targetMinutes,
       });
       continue;
     }
 
     // Portal tests are 0.25-hour rows paired after each lesson. Treat small targets as tests
     // even if the title text drifts (deterministic separation).
-    if (targetHours > 0 && targetHours <= 1 || rowType === "test") {
+    if ((targetHours > 0 && targetHours <= 1) || rowType === "test") {
       testTotals.push({
         sectionId,
         code: rawCode,
         title: row.title,
-        completedMinutes: Math.max(0, Math.min(targetMinutes, completedMinutes)),
-        targetMinutes
+        completedMinutes: Math.max(
+          0,
+          Math.min(targetMinutes, completedMinutes),
+        ),
+        targetMinutes,
       });
       continue;
     }
@@ -3279,7 +3862,7 @@ async function syncWebsiteStatsToProgress(progressState) {
         reason: "row_not_lesson",
         sectionId,
         rowType,
-        row
+        row,
       });
       continue;
     }
@@ -3287,10 +3870,13 @@ async function syncWebsiteStatsToProgress(progressState) {
     const existing = progressState.lessonProgress[sectionId] || {
       targetHours,
       completedMinutes: 0,
-      updatedAt: null
+      updatedAt: null,
     };
     const existingCompletedMinutes = Number(existing.completedMinutes || 0);
-    const normalizedCompletedMinutes = Math.max(0, Math.min(targetMinutes, completedMinutes));
+    const normalizedCompletedMinutes = Math.max(
+      0,
+      Math.min(targetMinutes, completedMinutes),
+    );
     const correctedCompletedMinutes =
       existingCompletedMinutes > targetMinutes
         ? normalizedCompletedMinutes
@@ -3298,14 +3884,15 @@ async function syncWebsiteStatsToProgress(progressState) {
     progressState.lessonProgress[sectionId] = {
       targetHours,
       completedMinutes: correctedCompletedMinutes,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
     parsedRows.push({
       sectionId,
       code: rawCode,
       completedHours,
       targetHours,
-      completedMinutes: progressState.lessonProgress[sectionId].completedMinutes
+      completedMinutes:
+        progressState.lessonProgress[sectionId].completedMinutes,
     });
     synced += 1;
   }
@@ -3321,15 +3908,17 @@ async function syncWebsiteStatsToProgress(progressState) {
     skipped,
     parsedRows,
     testTotals,
-    url: getSafeWebviewUrl() || null
+    url: getSafeWebviewUrl() || null,
   });
   await updateRuntimeState(
     {
       lessonTotals: progressState.lessonProgress,
       testTotals,
-      todayMinutes: progressState.dailyProgress.completedMinutes
+      todayMinutes: progressState.dailyProgress.completedMinutes,
     },
-    synced > 0 ? `Synced ${synced} website stats` : "No website stats matched lessons"
+    synced > 0
+      ? `Synced ${synced} website stats`
+      : "No website stats matched lessons",
   );
   await refreshDashboard();
   return { synced, missing: false };
@@ -3370,40 +3959,69 @@ async function findTargetSection(progressState) {
   }).filter(Boolean);
 
   if (lessonSections.length === 0) {
-    await emitPortalDriftWarning("lesson_section_mapping", ["li.section.main[data-sectionid='3-7']"]);
-    throw new Error("No lesson sections were found in the embedded course page.");
+    await emitPortalDriftWarning("lesson_section_mapping", [
+      "li.section.main[data-sectionid='3-7']",
+    ]);
+    throw new Error(
+      "No lesson sections were found in the embedded course page.",
+    );
   }
 
   const selection = await window.desktopApi.resolveLessonSelection({
     lessonSections,
-    progressState
+    progressState,
   });
   const selected =
-    lessonSections.find((section) => section.id === selection?.selectedSectionId) || lessonSections[0];
+    lessonSections.find(
+      (section) => section.id === selection?.selectedSectionId,
+    ) || lessonSections[0];
 
   const pickLessonAndTestActivities = (section) => {
-    const activities = Array.isArray(section?.activities) ? section.activities : [];
-    const lessonNumber = Number(String(section?.lessonKey || "").replace(/^E/u, ""));
-    const isScorm = (activity) => /\/mod\/scorm\/view\.php\?/i.test(String(activity?.href || ""));
-    const normalize = (value) => String(value || "").replace(/\s+/g, " ").trim();
+    const activities = Array.isArray(section?.activities)
+      ? section.activities
+      : [];
+    const lessonNumber = Number(
+      String(section?.lessonKey || "").replace(/^E/u, ""),
+    );
+    const isScorm = (activity) =>
+      /\/mod\/scorm\/view\.php\?/i.test(String(activity?.href || ""));
+    const normalize = (value) =>
+      String(value || "")
+        .replace(/\s+/g, " ")
+        .trim();
 
     const scormActivities = activities.filter(isScorm);
     const lessonActivity =
-      scormActivities.find((activity) => new RegExp(`^${lessonNumber}\\s*\\.`, "u").test(normalize(activity.label))) ||
-      scormActivities.find((activity) => new RegExp(`\\bΕ${lessonNumber}\\s*\\.`, "u").test(normalize(activity.label))) ||
-      scormActivities.find((activity) => /\\blesson\\b/i.test(normalize(activity.label))) ||
+      scormActivities.find((activity) =>
+        new RegExp(`^${lessonNumber}\\s*\\.`, "u").test(
+          normalize(activity.label),
+        ),
+      ) ||
+      scormActivities.find((activity) =>
+        new RegExp(`\\bΕ${lessonNumber}\\s*\\.`, "u").test(
+          normalize(activity.label),
+        ),
+      ) ||
+      scormActivities.find((activity) =>
+        /\\blesson\\b/i.test(normalize(activity.label)),
+      ) ||
       scormActivities[0] ||
       null;
 
     const testActivity =
-      scormActivities.find((activity) => /^ερωτησ(?:εισ|εις)\\b/iu.test(normalize(activity.label))) ||
-      scormActivities.find((activity) => /\\bquestions?\\b|\\bquiz\\b/iu.test(normalize(activity.label))) ||
+      scormActivities.find((activity) =>
+        /^ερωτησ(?:εισ|εις)\\b/iu.test(normalize(activity.label)),
+      ) ||
+      scormActivities.find((activity) =>
+        /\\bquestions?\\b|\\bquiz\\b/iu.test(normalize(activity.label)),
+      ) ||
       null;
 
     return { lessonActivity, testActivity };
   };
 
-  const { lessonActivity, testActivity } = pickLessonAndTestActivities(selected);
+  const { lessonActivity, testActivity } =
+    pickLessonAndTestActivities(selected);
   selected.activityHref = lessonActivity?.href || selected.activityHref || null;
   selected.lessonModuleId = lessonActivity?.moduleId || null;
   selected.testModuleId = testActivity?.moduleId || null;
@@ -3415,48 +4033,71 @@ async function findTargetSection(progressState) {
     reason: selection?.reason || "fallback_selected",
     candidateSnapshot: selection?.candidateSnapshot || [],
     selectedLessonModuleId: selected.lessonModuleId,
-    selectedTestModuleId: selected.testModuleId
+    selectedTestModuleId: selected.testModuleId,
   });
-  await updateRuntimeState({}, `Lesson ${selected.lessonKey} selected (${selection?.reason || "fallback_selected"})`);
+  await updateRuntimeState(
+    {},
+    `Lesson ${selected.lessonKey} selected (${selection?.reason || "fallback_selected"})`,
+  );
   return selected;
 }
 
 async function syncProgressState(progressState, targetSection, sessionMinutes) {
   progressState.lastScormExitedAt = new Date().toISOString();
   progressState.lastResolvedSectionId = targetSection.id;
-  progressState.lessonProgress[targetSection.id].updatedAt = new Date().toISOString();
+  progressState.lessonProgress[targetSection.id].updatedAt =
+    new Date().toISOString();
   const warnings = clampProgressInvariants(progressState);
   for (const warning of warnings) {
     await appendLog("progress_invariant_warning", warning);
   }
   await saveProgressStateSafe(progressState);
 
-  await updateRuntimeState({
-    lessonTotals: progressState.lessonProgress,
-    todayMinutes: progressState.dailyProgress.completedMinutes,
-    currentLesson: targetSection.id,
-    currentLessonTitle: targetSection.title,
-    nextPlannedExitAt: null
-  }, "SCORM session completed");
+  await updateRuntimeState(
+    {
+      lessonTotals: progressState.lessonProgress,
+      todayMinutes: progressState.dailyProgress.completedMinutes,
+      currentLesson: targetSection.id,
+      currentLessonTitle: targetSection.title,
+      nextPlannedExitAt: null,
+    },
+    "SCORM session completed",
+  );
 }
 
-async function applyIncrementalSessionProgress(progressState, targetSection, sessionId, checkpointKey, minutesToAdd = 1) {
+async function applyIncrementalSessionProgress(
+  progressState,
+  targetSection,
+  sessionId,
+  checkpointKey,
+  minutesToAdd = 1,
+) {
   const minutes = Math.max(0, Number(minutesToAdd) || 0);
   if (minutes <= 0) {
     return;
   }
   const todayKey = getAthensDayKey();
-  if (!progressState.dailyProgress || progressState.dailyProgress.date !== todayKey) {
+  if (
+    !progressState.dailyProgress ||
+    progressState.dailyProgress.date !== todayKey
+  ) {
     progressState.dailyProgress = {
       date: todayKey,
-      completedMinutes: 0
+      completedMinutes: 0,
     };
   }
-  const applied = applyLedgerCheckpoint(progressState, sessionId, checkpointKey, () => {
-    progressState.dailyProgress.completedMinutes += minutes;
-    progressState.lessonProgress[targetSection.id].completedMinutes += minutes;
-    progressState.lessonProgress[targetSection.id].updatedAt = new Date().toISOString();
-  });
+  const applied = applyLedgerCheckpoint(
+    progressState,
+    sessionId,
+    checkpointKey,
+    () => {
+      progressState.dailyProgress.completedMinutes += minutes;
+      progressState.lessonProgress[targetSection.id].completedMinutes +=
+        minutes;
+      progressState.lessonProgress[targetSection.id].updatedAt =
+        new Date().toISOString();
+    },
+  );
   if (!applied) {
     return;
   }
@@ -3469,7 +4110,7 @@ async function applyIncrementalSessionProgress(progressState, targetSection, ses
     lessonTotals: progressState.lessonProgress,
     todayMinutes: progressState.dailyProgress.completedMinutes,
     currentLesson: targetSection.id,
-    currentLessonTitle: targetSection.title
+    currentLessonTitle: targetSection.title,
   });
 }
 
@@ -3479,7 +4120,9 @@ async function handleSyncWebsiteStats() {
   }
   try {
     recordUiTelemetry("sync_website_stats");
-    await appendLog("website_stats_sync_requested", { url: getSafeWebviewUrl() || null });
+    await appendLog("website_stats_sync_requested", {
+      url: getSafeWebviewUrl() || null,
+    });
     embeddedAutomation.running = true;
     embeddedAutomation.stopRequested = false;
     await updateRuntimeState(
@@ -3487,28 +4130,30 @@ async function handleSyncWebsiteStats() {
         status: "running",
         paused: false,
         processRunning: true,
-        currentUrl: getSafeWebviewUrl() || null
+        currentUrl: getSafeWebviewUrl() || null,
       },
-      "Syncing website stats"
+      "Syncing website stats",
     );
     await waitForWebviewReady();
-    const progressState = ensureProgressShape(await window.desktopApi.getProgressState());
+    const progressState = ensureProgressShape(
+      await window.desktopApi.getProgressState(),
+    );
     await saveProgressStateSafe(progressState);
     await ensureTrainingPageLoaded();
     await syncWebsiteStatsToProgress(progressState);
   } catch (error) {
     await appendLog("website_stats_sync_failed", {
       message: error.message,
-      url: getSafeWebviewUrl() || null
+      url: getSafeWebviewUrl() || null,
     });
     await updateRuntimeState(
       {
         status: "error",
         paused: false,
         processRunning: false,
-        currentUrl: getSafeWebviewUrl() || null
+        currentUrl: getSafeWebviewUrl() || null,
       },
-      `Website stats sync failed: ${error.message}`
+      `Website stats sync failed: ${error.message}`,
     );
   } finally {
     embeddedAutomation.running = false;
@@ -3518,9 +4163,9 @@ async function handleSyncWebsiteStats() {
         status: "idle",
         paused: false,
         processRunning: false,
-        currentUrl: getSafeWebviewUrl() || null
+        currentUrl: getSafeWebviewUrl() || null,
       },
-      "Website stats sync finished"
+      "Website stats sync finished",
     );
     await refreshDashboard();
   }
@@ -3593,10 +4238,13 @@ async function muteAndPlayPresentation() {
     {
       timeoutMs: appConfig.timeoutMs,
       intervalMs: 1000,
-      errorMessage: "Player controls did not appear in time."
-    }
+      errorMessage: "Player controls did not appear in time.",
+    },
   ).catch(async () => {
-    await emitPortalDriftWarning("scorm_controls", ["#play-pause", "button[aria-label*='Mute']"]);
+    await emitPortalDriftWarning("scorm_controls", [
+      "#play-pause",
+      "button[aria-label*='Mute']",
+    ]);
     return false;
   });
   if (!controlsVisible) {
@@ -3606,15 +4254,20 @@ async function muteAndPlayPresentation() {
   await clickAnySelector([
     'button[aria-label*="Mute"], button[aria-label*="Unmute"]',
     ".vjs-mute-control",
-    ".mute-button"
+    ".mute-button",
   ]).catch(() => false);
   await delay(1500);
-  await clickAnySelector(["#play-pause", ".vjs-play-control", "button[aria-label*='Play']"]).catch(() => false);
+  await clickAnySelector([
+    "#play-pause",
+    ".vjs-play-control",
+    "button[aria-label*='Play']",
+  ]).catch(() => false);
 }
 
 async function advanceSlidesUntil(endAt, onMinuteElapsed = null) {
   let nextAdvanceAt = Date.now() + 15000;
   let nextMinuteCheckpointAt = Date.now() + 60_000;
+  let nextHeartbeatAt = Date.now() + 60_000;
 
   while (Date.now() < endAt) {
     if (embeddedAutomation.stopRequested) {
@@ -3625,11 +4278,24 @@ async function advanceSlidesUntil(endAt, onMinuteElapsed = null) {
     const remainingMs = endAt - now;
     const untilNextAdvance = Math.max(0, nextAdvanceAt - now);
     const untilMinuteCheckpoint = Math.max(0, nextMinuteCheckpointAt - now);
-    const chunkMs = Math.min(1000, remainingMs, untilNextAdvance || 1000, untilMinuteCheckpoint || 1000);
+    const chunkMs = Math.min(
+      1000,
+      remainingMs,
+      untilNextAdvance || 1000,
+      untilMinuteCheckpoint || 1000,
+    );
     await delay(chunkMs);
 
     if (embeddedAutomation.stopRequested) {
       return "stopped";
+    }
+
+    if (Date.now() >= nextHeartbeatAt) {
+      nextHeartbeatAt = Date.now() + 60_000;
+      await updateRuntimeState(
+        { currentUrl: getSafeWebviewUrl() || null },
+        "Session active (slide loop heartbeat)",
+      ).catch(() => {});
     }
 
     while (Date.now() >= nextMinuteCheckpointAt && Date.now() < endAt) {
@@ -3641,7 +4307,11 @@ async function advanceSlidesUntil(endAt, onMinuteElapsed = null) {
 
     if (Date.now() >= nextAdvanceAt && Date.now() < endAt) {
       await applyRandomPreClickDelay("advance_slides_next_button");
-      await clickAnySelector(["#next", ".vjs-next-button", "button[aria-label*='Next']"]).catch(() => false);
+      await clickAnySelector([
+        "#next",
+        ".vjs-next-button",
+        "button[aria-label*='Next']",
+      ]).catch(() => false);
       nextAdvanceAt = Date.now() + 15000;
     }
   }
@@ -3654,12 +4324,17 @@ async function openTrainingAndCourse() {
   await loadUrl(appConfig.trainingUrl);
   await waitForUrlMatch(/\/training\/trainee\/training/i);
   await appendLog("training_page_opened", { url: getSafeWebviewUrl() });
-  await updateRuntimeState({ currentUrl: getSafeWebviewUrl() }, "Training page opened");
+  await updateRuntimeState(
+    { currentUrl: getSafeWebviewUrl() },
+    "Training page opened",
+  );
 
-  const directCourseModeEnabled = Boolean(currentSettings?.featureFlags?.navigation?.directCourseMode);
+  const directCourseModeEnabled = Boolean(
+    currentSettings?.featureFlags?.navigation?.directCourseMode,
+  );
   await appendLog("open_courses_strategy_selected", {
     strategy: directCourseModeEnabled ? "direct_first" : "click_first",
-    url: getSafeWebviewUrl() || null
+    url: getSafeWebviewUrl() || null,
   });
 
   if (directCourseModeEnabled) {
@@ -3667,20 +4342,25 @@ async function openTrainingAndCourse() {
       await openCourseViaElearningAutologin();
       const currentUrl = getSafeWebviewUrl() || "";
       if (!isCourseUrl(currentUrl)) {
-        throw new Error(`Direct mode did not reach course URL. Last URL: ${currentUrl || "-"}`);
+        throw new Error(
+          `Direct mode did not reach course URL. Last URL: ${currentUrl || "-"}`,
+        );
       }
       await appendLog("open_courses_resolved_via_direct_mode", {
         elapsedMs: Date.now() - stepStartedAt,
-        url: currentUrl || null
+        url: currentUrl || null,
       });
       await appendLog("course_page_opened", { url: getSafeWebviewUrl() });
-      await updateRuntimeState({ currentUrl: getSafeWebviewUrl() }, "Course page opened");
+      await updateRuntimeState(
+        { currentUrl: getSafeWebviewUrl() },
+        "Course page opened",
+      );
       return;
     } catch (error) {
       await appendLog("open_courses_navigation_fallback", {
         reason: "direct_mode_failed_fallback_to_click",
         message: error.message || "Direct mode failed.",
-        url: getSafeWebviewUrl() || null
+        url: getSafeWebviewUrl() || null,
       });
     }
   }
@@ -3718,10 +4398,13 @@ async function openTrainingAndCourse() {
     {
       timeoutMs: appConfig.timeoutMs,
       intervalMs: 500,
-      errorMessage: "Open courses button did not appear."
-    }
+      errorMessage: "Open courses button did not appear.",
+    },
   ).catch(async () => {
-    await emitPortalDriftWarning("open_courses_button", OPEN_COURSES_BUTTON_SELECTORS);
+    await emitPortalDriftWarning(
+      "open_courses_button",
+      OPEN_COURSES_BUTTON_SELECTORS,
+    );
     return false;
   });
   if (!openCoursesReady) {
@@ -3867,7 +4550,7 @@ async function openTrainingAndCourse() {
       score: clickResult?.score ?? null,
       candidateCount: clickResult?.candidateCount ?? 0,
       clickMethod: clickResult?.clickMethod || null,
-      url: getSafeWebviewUrl() || null
+      url: getSafeWebviewUrl() || null,
     });
     if (clicked) {
       const baseX = Number(clickResult?.clickX ?? 0);
@@ -3875,12 +4558,20 @@ async function openTrainingAndCourse() {
       const clickPoints = [
         { x: baseX, y: baseY, strategy: "center" },
         { x: baseX + 6, y: baseY + 2, strategy: "offset_plus" },
-        { x: baseX - 6, y: baseY - 2, strategy: "offset_minus" }
-      ].filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y) && point.x > 0 && point.y > 0);
+        { x: baseX - 6, y: baseY - 2, strategy: "offset_minus" },
+      ].filter(
+        (point) =>
+          Number.isFinite(point.x) &&
+          Number.isFinite(point.y) &&
+          point.x > 0 &&
+          point.y > 0,
+      );
       let hostInputClicked = false;
       for (let idx = 0; idx < clickPoints.length; idx += 1) {
         const point = clickPoints[idx];
-        hostInputClicked = await clickWebviewAt(point.x, point.y).catch(() => false);
+        hostInputClicked = await clickWebviewAt(point.x, point.y).catch(
+          () => false,
+        );
         await appendLog("open_courses_host_input_click", {
           attempt,
           hostInputClicked,
@@ -3888,7 +4579,7 @@ async function openTrainingAndCourse() {
           clickY: point.y,
           clickStrategy: point.strategy,
           clickAttempt: idx + 1,
-          url: getSafeWebviewUrl() || null
+          url: getSafeWebviewUrl() || null,
         });
         if (hostInputClicked) {
           await delay(120);
@@ -3902,7 +4593,7 @@ async function openTrainingAndCourse() {
     await appendLog("open_courses_failed_terminal", {
       reason: "button_click_failed",
       elapsedMs: Date.now() - stepStartedAt,
-      url: getSafeWebviewUrl() || null
+      url: getSafeWebviewUrl() || null,
     });
     throw new Error("Open courses button click failed.");
   }
@@ -3915,25 +4606,27 @@ async function openTrainingAndCourse() {
     await waitForCondition(
       async () => {
         const currentUrl = getSafeWebviewUrl() || "";
-        return isElearningLandingUrl(currentUrl) || isCourseUrl(currentUrl) ? currentUrl : null;
+        return isElearningLandingUrl(currentUrl) || isCourseUrl(currentUrl)
+          ? currentUrl
+          : null;
       },
       {
         timeoutMs: postClickNavigationTimeoutMs,
         intervalMs: 500,
-        errorMessage: "Did not reach elearning after opening courses."
-      }
+        errorMessage: "Did not reach elearning after opening courses.",
+      },
     );
     navigationReached = true;
     await appendLog("open_courses_effect_confirmed", {
       source: "click_navigation",
       url: getSafeWebviewUrl() || null,
-      elapsedMs: Date.now() - stepStartedAt
+      elapsedMs: Date.now() - stepStartedAt,
     });
   } catch (error) {
     await appendLog("open_courses_navigation_fallback", {
       message: error.message || "Did not reach elearning after click.",
       reason: "post_click_navigation_timeout",
-      url: getSafeWebviewUrl() || null
+      url: getSafeWebviewUrl() || null,
     });
   }
 
@@ -3946,7 +4639,7 @@ async function openTrainingAndCourse() {
         reason: "recovery_error",
         message: error.message || "Recovery flow failed.",
         elapsedMs: Date.now() - stepStartedAt,
-        url: getSafeWebviewUrl() || null
+        url: getSafeWebviewUrl() || null,
       });
       throw error;
     }
@@ -3956,7 +4649,7 @@ async function openTrainingAndCourse() {
   if (!isCourseUrl(currentUrl)) {
     await appendLog("open_courses_navigation_fallback", {
       reason: "not_on_course_after_landing",
-      url: currentUrl || null
+      url: currentUrl || null,
     });
     resolvedVia = "recovery";
     try {
@@ -3966,7 +4659,7 @@ async function openTrainingAndCourse() {
         reason: "recovery_error",
         message: error.message || "Recovery flow failed.",
         elapsedMs: Date.now() - stepStartedAt,
-        url: getSafeWebviewUrl() || null
+        url: getSafeWebviewUrl() || null,
       });
       throw error;
     }
@@ -3977,25 +4670,30 @@ async function openTrainingAndCourse() {
     await appendLog("open_courses_failed_terminal", {
       reason: "not_on_course_after_recovery",
       elapsedMs: Date.now() - stepStartedAt,
-      url: currentUrl || null
+      url: currentUrl || null,
     });
-    throw new Error(`Failed to reach course page after click/recovery. Last URL: ${currentUrl || "-"}`);
+    throw new Error(
+      `Failed to reach course page after click/recovery. Last URL: ${currentUrl || "-"}`,
+    );
   }
 
   if (resolvedVia === "click") {
     await appendLog("open_courses_resolved_via_click", {
       elapsedMs: Date.now() - stepStartedAt,
-      url: currentUrl || null
+      url: currentUrl || null,
     });
   } else {
     await appendLog("open_courses_resolved_via_recovery", {
       elapsedMs: Date.now() - stepStartedAt,
-      url: currentUrl || null
+      url: currentUrl || null,
     });
   }
 
   await appendLog("course_page_opened", { url: getSafeWebviewUrl() });
-  await updateRuntimeState({ currentUrl: getSafeWebviewUrl() }, "Course page opened");
+  await updateRuntimeState(
+    { currentUrl: getSafeWebviewUrl() },
+    "Course page opened",
+  );
 }
 
 async function runEmbeddedAutomation() {
@@ -4033,7 +4731,7 @@ async function runEmbeddedAutomation() {
         end,
         startMinutes,
         endMinutes,
-        wrapsMidnight: endMinutes <= startMinutes
+        wrapsMidnight: endMinutes <= startMinutes,
       });
     }
     windows.sort((a, b) => a.startMinutes - b.startMinutes);
@@ -4072,7 +4770,12 @@ async function runEmbeddedAutomation() {
       .sort((a, b) => a - b)
       .map((startMinutes) => {
         const startAt = new Date(today);
-        startAt.setHours(Math.floor(startMinutes / 60), startMinutes % 60, 0, 0);
+        startAt.setHours(
+          Math.floor(startMinutes / 60),
+          startMinutes % 60,
+          0,
+          0,
+        );
         return startAt;
       });
     for (const startAt of startsToday) {
@@ -4100,72 +4803,96 @@ async function runEmbeddedAutomation() {
   }
 
   await waitForWebviewReady();
-  const progressState = ensureProgressShape(await window.desktopApi.getProgressState());
+  const progressState = ensureProgressShape(
+    await window.desktopApi.getProgressState(),
+  );
   await saveProgressStateSafe(progressState);
   const sessionRange = await window.desktopApi.resolveSessionRange({
     progressState,
-    configLike: appConfig
+    configLike: appConfig,
   });
-  const dailyLimitMinutes = progressState.dailyScormLimitMinutes || appConfig.dailyScormLimitMinutes;
-  const scheduleWindowsCsv = String(currentSettings?.scheduler?.allowedWindowsCsv || "").trim();
-  const scheduleWindows = parseScheduleWindowsCsv(scheduleWindowsCsv).windows || [];
-  const nightTargetBaseMinutes = Math.max(0, Number(currentSettings?.scheduler?.nightTargetMinutes || 0) || 0);
-  const nightJitterMinutes = Math.max(0, Number(currentSettings?.scheduler?.nightJitterMinutes || 0) || 0);
+  const dailyLimitMinutes =
+    progressState.dailyScormLimitMinutes || appConfig.dailyScormLimitMinutes;
+  const scheduleWindowsCsv = String(
+    currentSettings?.scheduler?.allowedWindowsCsv || "",
+  ).trim();
+  const scheduleWindows =
+    parseScheduleWindowsCsv(scheduleWindowsCsv).windows || [];
+  const nightTargetBaseMinutes = Math.max(
+    0,
+    Number(currentSettings?.scheduler?.nightTargetMinutes || 0) || 0,
+  );
+  const nightJitterMinutes = Math.max(
+    0,
+    Number(currentSettings?.scheduler?.nightJitterMinutes || 0) || 0,
+  );
 
   const resolveActiveWindowIndex = (activeWindow) => {
     if (!activeWindow) return -1;
     return scheduleWindows.findIndex(
       (w) =>
         Number(w.startMinutes) === Number(activeWindow.startMinutes) &&
-        Number(w.endMinutes) === Number(activeWindow.endMinutes)
+        Number(w.endMinutes) === Number(activeWindow.endMinutes),
     );
   };
 
   const todayKey = getAthensDayKey();
-  if (!progressState.schedulerDailySplit || progressState.schedulerDailySplit.date !== todayKey) {
+  if (
+    !progressState.schedulerDailySplit ||
+    progressState.schedulerDailySplit.date !== todayKey
+  ) {
     const plannedNightMinutes =
       nightTargetBaseMinutes > 0
         ? Math.max(
             0,
             Math.min(
               dailyLimitMinutes,
-              randomIntInRange(nightTargetBaseMinutes - nightJitterMinutes, nightTargetBaseMinutes + nightJitterMinutes)
-            )
+              randomIntInRange(
+                nightTargetBaseMinutes - nightJitterMinutes,
+                nightTargetBaseMinutes + nightJitterMinutes,
+              ),
+            ),
           )
         : 0;
     progressState.schedulerDailySplit = {
       date: todayKey,
       plannedNightMinutes,
       nightMinutes: 0,
-      eveningMinutes: 0
+      eveningMinutes: 0,
     };
     await saveProgressStateSafe(progressState);
     await appendLog("schedule_randomized_night_budget", {
       date: todayKey,
       plannedNightMinutes,
       nightTargetBaseMinutes,
-      nightJitterMinutes
+      nightJitterMinutes,
     });
   }
 
   embeddedAutomation.running = true;
   embeddedAutomation.stopRequested = false;
 
-  await updateRuntimeState({
-    status: "running",
-    paused: false,
-    processRunning: true,
-    lessonTotals: progressState.lessonProgress,
-    todayMinutes: progressState.dailyProgress.completedMinutes,
-    dailyLimitMinutes
-  }, "Embedded automation started");
+  await updateRuntimeState(
+    {
+      status: "running",
+      paused: false,
+      processRunning: true,
+      lessonTotals: progressState.lessonProgress,
+      todayMinutes: progressState.dailyProgress.completedMinutes,
+      dailyLimitMinutes,
+    },
+    "Embedded automation started",
+  );
   await appendLog("embedded_automation_started");
   await refreshDashboard();
 
   try {
     await appendLog("embedded_step", { message: "Loading login page" });
     await loadUrl(appConfig.loginUrl);
-    await appendLog("embedded_step", { message: "Filling login form", url: getSafeWebviewUrl() || null });
+    await appendLog("embedded_step", {
+      message: "Filling login form",
+      url: getSafeWebviewUrl() || null,
+    });
     await fillLoginForm();
     await waitForCondition(
       async () => {
@@ -4175,36 +4902,44 @@ async function runEmbeddedAutomation() {
       {
         timeoutMs: appConfig.timeoutMs,
         intervalMs: 500,
-        errorMessage: "Login did not leave the login page in the embedded browser."
-      }
+        errorMessage:
+          "Login did not leave the login page in the embedded browser.",
+      },
     );
 
     await appendLog("embedded_authenticated", { url: getSafeWebviewUrl() });
-    await updateRuntimeState({ currentUrl: getSafeWebviewUrl() }, "Authenticated in embedded browser");
+    await updateRuntimeState(
+      { currentUrl: getSafeWebviewUrl() },
+      "Authenticated in embedded browser",
+    );
 
     while (!embeddedAutomation.stopRequested) {
       if (progressState.dailyProgress.completedMinutes >= dailyLimitMinutes) {
         await appendLog("daily_limit_reached", {
           completedMinutesToday: progressState.dailyProgress.completedMinutes,
-          dailyLimitMinutes
+          dailyLimitMinutes,
         });
         await window.desktopApi
           .sendDiscordNotification({
             kind: "limits",
             message: "Daily limit reached.",
             details: {
-              completedMinutesToday: progressState.dailyProgress.completedMinutes,
-              dailyLimitMinutes
-            }
+              completedMinutesToday:
+                progressState.dailyProgress.completedMinutes,
+              dailyLimitMinutes,
+            },
           })
           .catch(() => null);
-        await updateRuntimeState({
-          status: "idle",
-          paused: false,
-          processRunning: false,
-          nextPlannedExitAt: null,
-          todayMinutes: progressState.dailyProgress.completedMinutes
-        }, "Daily limit reached");
+        await updateRuntimeState(
+          {
+            status: "idle",
+            paused: false,
+            processRunning: false,
+            nextPlannedExitAt: null,
+            todayMinutes: progressState.dailyProgress.completedMinutes,
+          },
+          "Daily limit reached",
+        );
         return;
       }
 
@@ -4217,17 +4952,22 @@ async function runEmbeddedAutomation() {
             status: "paused",
             paused: true,
             nextPlannedExitAt: nextStartIso,
-            currentUrl: getSafeWebviewUrl() || null
+            currentUrl: getSafeWebviewUrl() || null,
           },
-          "Waiting for scheduled window to open"
+          "Waiting for scheduled window to open",
         );
         await appendLog("schedule_window_waiting", {
-          nextWindowStartIso: nextStartIso
+          nextWindowStartIso: nextStartIso,
         });
 
-        while (!embeddedAutomation.stopRequested && !isNowWithinAnyWindow(scheduleWindows).within) {
+        while (
+          !embeddedAutomation.stopRequested &&
+          !isNowWithinAnyWindow(scheduleWindows).within
+        ) {
           const next = computeNextWindowStart(scheduleWindows);
-          const wakeMs = next ? Math.max(5_000, Math.min(60_000, next.getTime() - Date.now())) : 60_000;
+          const wakeMs = next
+            ? Math.max(5_000, Math.min(60_000, next.getTime() - Date.now()))
+            : 60_000;
           await delay(wakeMs);
         }
 
@@ -4235,9 +4975,9 @@ async function runEmbeddedAutomation() {
           {
             status: "running",
             paused: false,
-            currentUrl: getSafeWebviewUrl() || null
+            currentUrl: getSafeWebviewUrl() || null,
           },
-          "Scheduled window open; resuming run"
+          "Scheduled window open; resuming run",
         );
         await appendLog("schedule_window_resumed", {});
       }
@@ -4250,17 +4990,20 @@ async function runEmbeddedAutomation() {
       await appendLog("section_selected", {
         sectionId: targetSection.id,
         sectionTitle: targetSection.title,
-        lessonUrl: targetSection.activityHref
+        lessonUrl: targetSection.activityHref,
       });
-      await updateRuntimeState({
-        currentLesson: targetSection.id,
-        currentLessonTitle: targetSection.title,
-        currentUrl: getSafeWebviewUrl()
-      }, `Section ${targetSection.id} selected`);
+      await updateRuntimeState(
+        {
+          currentLesson: targetSection.id,
+          currentLessonTitle: targetSection.title,
+          currentUrl: getSafeWebviewUrl(),
+        },
+        `Section ${targetSection.id} selected`,
+      );
 
       await applyRandomPreClickDelay("open_scorm_activity_link", {
         sectionId: targetSection.id,
-        lessonUrl: targetSection.activityHref || null
+        lessonUrl: targetSection.activityHref || null,
       });
       const clickedActivityLink = await executeInWebview(`
         (() => {
@@ -4276,7 +5019,7 @@ async function runEmbeddedAutomation() {
       if (!clickedActivityLink && targetSection.activityHref) {
         await appendLog("scorm_activity_click_failed_try_loadurl", {
           sectionId: targetSection.id,
-          lessonUrl: targetSection.activityHref
+          lessonUrl: targetSection.activityHref,
         });
         await loadUrl(targetSection.activityHref);
       } else if (!clickedActivityLink) {
@@ -4295,7 +5038,7 @@ async function runEmbeddedAutomation() {
           if (error && error.code === "SCORM_LOGIN_REDIRECT") {
             if (scormLoginRecoveriesUsed >= maxScormLoginRecoveries) {
               throw new Error(
-                `SCORM page did not open after login redirect recovery (${maxScormLoginRecoveries} attempts). Last URL: ${getSafeWebviewUrl() || "-"}`
+                `SCORM page did not open after login redirect recovery (${maxScormLoginRecoveries} attempts). Last URL: ${getSafeWebviewUrl() || "-"}`,
               );
             }
             scormLoginRecoveriesUsed += 1;
@@ -4309,9 +5052,12 @@ async function runEmbeddedAutomation() {
 
       await appendLog("scorm_opened", {
         sectionId: targetSection.id,
-        url: getSafeWebviewUrl()
+        url: getSafeWebviewUrl(),
       });
-      await updateRuntimeState({ currentUrl: getSafeWebviewUrl() }, "SCORM opened");
+      await updateRuntimeState(
+        { currentUrl: getSafeWebviewUrl() },
+        "SCORM opened",
+      );
 
       const redirectVisible = await executeInWebview(`
         (() => Boolean(document.querySelector('input[type="submit"][value="Είσοδος/Σύνδεση"]')))()
@@ -4321,13 +5067,15 @@ async function runEmbeddedAutomation() {
         await waitForCondition(
           async () => {
             const currentUrl = getSafeWebviewUrl() || "";
-            return /mod\/scorm\/player\.php/i.test(currentUrl) ? currentUrl : null;
+            return /mod\/scorm\/player\.php/i.test(currentUrl)
+              ? currentUrl
+              : null;
           },
           {
             timeoutMs: appConfig.timeoutMs,
             intervalMs: 500,
-            errorMessage: "SCORM player redirect did not complete."
-          }
+            errorMessage: "SCORM player redirect did not complete.",
+          },
         );
       }
 
@@ -4336,35 +5084,46 @@ async function runEmbeddedAutomation() {
       progressState.lastScormStartedAt = new Date().toISOString();
       progressState.currentSessionId = `${targetSection.id}-${Date.now()}`;
       await saveProgressStateSafe(progressState);
-      const remainingMinutes = Math.max(0, dailyLimitMinutes - progressState.dailyProgress.completedMinutes);
+      const remainingMinutes = Math.max(
+        0,
+        dailyLimitMinutes - progressState.dailyProgress.completedMinutes,
+      );
       if (remainingMinutes <= 0) {
-        await exitCurrentScormSafely(targetSection, "daily_limit_reached_before_session").catch(async (error) => {
+        await exitCurrentScormSafely(
+          targetSection,
+          "daily_limit_reached_before_session",
+        ).catch(async (error) => {
           await appendLog("scorm_safe_exit_failed", {
             sectionId: targetSection.id,
             reason: "daily_limit_reached_before_session",
             message: error?.message || String(error),
-            url: getSafeWebviewUrl() || null
+            url: getSafeWebviewUrl() || null,
           });
           return false;
         });
         await appendLog("daily_limit_reached", {
           completedMinutesToday: progressState.dailyProgress.completedMinutes,
-          dailyLimitMinutes
+          dailyLimitMinutes,
         });
-        await updateRuntimeState({
-          status: "idle",
-          paused: false,
-          processRunning: false,
-          nextPlannedExitAt: null,
-          todayMinutes: progressState.dailyProgress.completedMinutes
-        }, "Daily limit reached");
+        await updateRuntimeState(
+          {
+            status: "idle",
+            paused: false,
+            processRunning: false,
+            nextPlannedExitAt: null,
+            todayMinutes: progressState.dailyProgress.completedMinutes,
+          },
+          "Daily limit reached",
+        );
         return;
       }
       const activeWindow = isNowWithinAnyWindow(scheduleWindows).activeWindow;
       const activeWindowIndex = resolveActiveWindowIndex(activeWindow);
       const windowRemaining = minutesUntilWindowEnd(activeWindow);
       const effectiveRemainingMinutes =
-        windowRemaining === null ? remainingMinutes : Math.max(0, Math.min(remainingMinutes, windowRemaining));
+        windowRemaining === null
+          ? remainingMinutes
+          : Math.max(0, Math.min(remainingMinutes, windowRemaining));
       if (effectiveRemainingMinutes <= 0) {
         continue;
       }
@@ -4384,38 +5143,45 @@ async function runEmbeddedAutomation() {
         await appendLog("schedule_night_budget_reached", {
           plannedNightMinutes: split.plannedNightMinutes,
           nightMinutes: split.nightMinutes,
-          nextWindowStartIso: nextStartIso
+          nextWindowStartIso: nextStartIso,
         });
         await updateRuntimeState(
           {
             status: "paused",
             paused: true,
             nextPlannedExitAt: nextStartIso,
-            currentUrl: getSafeWebviewUrl() || null
+            currentUrl: getSafeWebviewUrl() || null,
           },
-          "Night budget reached; waiting for next window"
+          "Night budget reached; waiting for next window",
         );
-        while (!embeddedAutomation.stopRequested && !isNowWithinAnyWindow(scheduleWindows).within) {
+        while (
+          !embeddedAutomation.stopRequested &&
+          !isNowWithinAnyWindow(scheduleWindows).within
+        ) {
           const next = computeNextWindowStart(scheduleWindows);
-          const wakeMs = next ? Math.max(5_000, Math.min(60_000, next.getTime() - Date.now())) : 60_000;
+          const wakeMs = next
+            ? Math.max(5_000, Math.min(60_000, next.getTime() - Date.now()))
+            : 60_000;
           await delay(wakeMs);
         }
         await updateRuntimeState(
           {
             status: "running",
             paused: false,
-            currentUrl: getSafeWebviewUrl() || null
+            currentUrl: getSafeWebviewUrl() || null,
           },
-          "Resuming in next window"
+          "Resuming in next window",
         );
         continue;
       }
 
       const sessionMinutes = await window.desktopApi.pickSessionMinutes({
         range: sessionRange,
-        remainingMinutes: effectiveRemainingMinutes
+        remainingMinutes: effectiveRemainingMinutes,
       });
-      const plannedExitAt = new Date(Date.now() + sessionMinutes * 60 * 1000).toISOString();
+      const plannedExitAt = new Date(
+        Date.now() + sessionMinutes * 60 * 1000,
+      ).toISOString();
       await appendLog("scorm_session_started", {
         sectionId: targetSection.id,
         sessionId: progressState.currentSessionId,
@@ -4423,12 +5189,15 @@ async function runEmbeddedAutomation() {
         chosenSessionMinutes: sessionMinutes,
         rangeMin: sessionRange.min,
         rangeMax: sessionRange.max,
-        url: getSafeWebviewUrl()
+        url: getSafeWebviewUrl(),
       });
-      await updateRuntimeState({
-        currentUrl: getSafeWebviewUrl(),
-        nextPlannedExitAt: plannedExitAt
-      }, `Waiting ${sessionMinutes} minutes before exit`);
+      await updateRuntimeState(
+        {
+          currentUrl: getSafeWebviewUrl(),
+          nextPlannedExitAt: plannedExitAt,
+        },
+        `Waiting ${sessionMinutes} minutes before exit`,
+      );
 
       let persistedSessionMinutes = 0;
       const persistOneMinute = async () => {
@@ -4440,11 +5209,12 @@ async function runEmbeddedAutomation() {
           targetSection,
           progressState.currentSessionId,
           `minute-${persistedSessionMinutes + 1}`,
-          1
+          1,
         );
         const split = progressState.schedulerDailySplit;
         if (split && split.date === getAthensDayKey()) {
-          const activeWindow = isNowWithinAnyWindow(scheduleWindows).activeWindow;
+          const activeWindow =
+            isNowWithinAnyWindow(scheduleWindows).activeWindow;
           const idx = resolveActiveWindowIndex(activeWindow);
           if (idx === 0) {
             split.nightMinutes = Number(split.nightMinutes || 0) + 1;
@@ -4455,14 +5225,20 @@ async function runEmbeddedAutomation() {
         }
         persistedSessionMinutes += 1;
       };
-      const sessionOutcome = await advanceSlidesUntil(Date.now() + sessionMinutes * 60 * 1000, persistOneMinute);
+      const sessionOutcome = await advanceSlidesUntil(
+        Date.now() + sessionMinutes * 60 * 1000,
+        persistOneMinute,
+      );
       if (sessionOutcome === "stopped") {
-        await exitCurrentScormSafely(targetSection, "user_stop_requested").catch(async (error) => {
+        await exitCurrentScormSafely(
+          targetSection,
+          "user_stop_requested",
+        ).catch(async (error) => {
           await appendLog("scorm_safe_exit_failed", {
             sectionId: targetSection.id,
             reason: "user_stop_requested",
             message: error?.message || String(error),
-            url: getSafeWebviewUrl() || null
+            url: getSafeWebviewUrl() || null,
           });
           return false;
         });
@@ -4470,37 +5246,45 @@ async function runEmbeddedAutomation() {
         await saveProgressStateSafe(progressState);
         await appendLog("embedded_automation_stopped", {
           sectionId: targetSection.id,
-          url: getSafeWebviewUrl() || null
+          url: getSafeWebviewUrl() || null,
         });
-        await updateRuntimeState({
-          status: "idle",
-          paused: false,
-          processRunning: false,
-          nextPlannedExitAt: null,
-          currentUrl: getSafeWebviewUrl() || null
-        }, "Stopped safely by user");
+        await updateRuntimeState(
+          {
+            status: "idle",
+            paused: false,
+            processRunning: false,
+            nextPlannedExitAt: null,
+            currentUrl: getSafeWebviewUrl() || null,
+          },
+          "Stopped safely by user",
+        );
         return;
       }
-      const remainingSessionMinutes = Math.max(0, sessionMinutes - persistedSessionMinutes);
+      const remainingSessionMinutes = Math.max(
+        0,
+        sessionMinutes - persistedSessionMinutes,
+      );
       if (remainingSessionMinutes > 0) {
         await applyIncrementalSessionProgress(
           progressState,
           targetSection,
           progressState.currentSessionId,
           "final-remainder",
-          remainingSessionMinutes
+          remainingSessionMinutes,
         );
       }
 
-      await exitCurrentScormSafely(targetSection, "session_completed").catch(async (error) => {
-        await appendLog("scorm_safe_exit_failed", {
-          sectionId: targetSection.id,
-          reason: "session_completed",
-          message: error?.message || String(error),
-          url: getSafeWebviewUrl() || null
-        });
-        throw error;
-      });
+      await exitCurrentScormSafely(targetSection, "session_completed").catch(
+        async (error) => {
+          await appendLog("scorm_safe_exit_failed", {
+            sectionId: targetSection.id,
+            reason: "session_completed",
+            message: error?.message || String(error),
+            url: getSafeWebviewUrl() || null,
+          });
+          throw error;
+        },
+      );
 
       await syncProgressState(progressState, targetSection, sessionMinutes);
       await appendLog("scorm_session_completed", {
@@ -4510,21 +5294,25 @@ async function runEmbeddedAutomation() {
         rangeMin: sessionRange.min,
         rangeMax: sessionRange.max,
         completedMinutesToday: progressState.dailyProgress.completedMinutes,
-        completedMinutesForSection: progressState.lessonProgress[targetSection.id].completedMinutes,
-        url: getSafeWebviewUrl()
+        completedMinutesForSection:
+          progressState.lessonProgress[targetSection.id].completedMinutes,
+        url: getSafeWebviewUrl(),
       });
       await refreshDashboard();
     }
   } finally {
     embeddedAutomation.running = false;
     embeddedAutomation.stopRequested = false;
-    await updateRuntimeState({
-      status: "idle",
-      paused: false,
-      processRunning: false,
-      nextPlannedExitAt: null,
-      currentUrl: getSafeWebviewUrl() || null
-    }, "Embedded automation stopped");
+    await updateRuntimeState(
+      {
+        status: "idle",
+        paused: false,
+        processRunning: false,
+        nextPlannedExitAt: null,
+        currentUrl: getSafeWebviewUrl() || null,
+      },
+      "Embedded automation stopped",
+    );
     await refreshDashboard();
   }
 }
@@ -4539,7 +5327,7 @@ async function handleStartBot() {
     await window.desktopApi
       .sendDiscordNotification({
         kind: "startStop",
-        message: "Study session started (embedded automation)."
+        message: "Study session started (embedded automation).",
       })
       .catch(() => null);
     updateOnboardingChecklist("startedAutomation", true);
@@ -4550,37 +5338,43 @@ async function handleStartBot() {
     embeddedAutomation.stopRequested = false;
     if (error.message === "Automation stopped by user.") {
       await appendLog("embedded_automation_stopped", {
-        url: getSafeWebviewUrl() || null
+        url: getSafeWebviewUrl() || null,
       });
-      await updateRuntimeState({
-        status: "idle",
-        paused: false,
-        processRunning: false,
-        nextPlannedExitAt: null,
-        currentUrl: getSafeWebviewUrl() || null
-      }, "Stopped by user");
+      await updateRuntimeState(
+        {
+          status: "idle",
+          paused: false,
+          processRunning: false,
+          nextPlannedExitAt: null,
+          currentUrl: getSafeWebviewUrl() || null,
+        },
+        "Stopped by user",
+      );
       await refreshDashboard();
       return;
     }
 
     await appendLog("embedded_automation_failed", {
       message: error.message,
-      url: getSafeWebviewUrl() || null
+      url: getSafeWebviewUrl() || null,
     });
     await window.desktopApi
       .sendDiscordNotification({
         kind: "errors",
         message: "Embedded automation failed.",
-        details: { message: error.message, url: getSafeWebviewUrl() || null }
+        details: { message: error.message, url: getSafeWebviewUrl() || null },
       })
       .catch(() => null);
-    await updateRuntimeState({
-      status: "error",
-      paused: false,
-      processRunning: false,
-      nextPlannedExitAt: null,
-      currentUrl: getSafeWebviewUrl() || null
-    }, `Error: ${error.message}`);
+    await updateRuntimeState(
+      {
+        status: "error",
+        paused: false,
+        processRunning: false,
+        nextPlannedExitAt: null,
+        currentUrl: getSafeWebviewUrl() || null,
+      },
+      `Error: ${error.message}`,
+    );
     await refreshDashboard();
     console.error(error);
   }
@@ -4593,32 +5387,37 @@ async function handleStopBot() {
   await window.desktopApi
     .sendDiscordNotification({
       kind: "startStop",
-      message: "Stop requested (embedded automation)."
+      message: "Stop requested (embedded automation).",
     })
     .catch(() => null);
   if (isScormUrl(getSafeWebviewUrl() || "")) {
     await appendLog("stop_requested_during_scorm", {
-      url: getSafeWebviewUrl() || null
+      url: getSafeWebviewUrl() || null,
     });
   }
   await appendLog("embedded_automation_stop_requested", {
-    url: getSafeWebviewUrl() || null
+    url: getSafeWebviewUrl() || null,
   });
-  await exitCurrentScormSafely(null, "user_stop_requested").catch(async (error) => {
-    await appendLog("scorm_safe_exit_failed", {
-      sectionId: null,
-      reason: "user_stop_requested",
-      message: error?.message || String(error),
-      url: getSafeWebviewUrl() || null
-    });
-    return false;
-  });
-  await updateRuntimeState({
-    status: "paused",
-    paused: true,
-    processRunning: true,
-    nextPlannedExitAt: null
-  }, "Stopping safely");
+  await exitCurrentScormSafely(null, "user_stop_requested").catch(
+    async (error) => {
+      await appendLog("scorm_safe_exit_failed", {
+        sectionId: null,
+        reason: "user_stop_requested",
+        message: error?.message || String(error),
+        url: getSafeWebviewUrl() || null,
+      });
+      return false;
+    },
+  );
+  await updateRuntimeState(
+    {
+      status: "paused",
+      paused: true,
+      processRunning: true,
+      nextPlannedExitAt: null,
+    },
+    "Stopping safely",
+  );
   await refreshDashboard();
 }
 
@@ -4630,41 +5429,52 @@ function setupEmbeddedBrowser() {
     if (typeof detachWebviewWindowOpenListener === "function") {
       detachWebviewWindowOpenListener();
     }
-    detachWebviewWindowOpenListener = window.desktopApi.onWebviewWindowOpen((payload) => {
-      const targetUrl = String(payload?.targetUrl || "").trim();
-      if (!targetUrl) {
-        return;
-      }
-      appendLog("webview_popup_intercepted_main", {
-        targetUrl,
-        sourceUrl: payload?.sourceUrl || getSafeWebviewUrl() || null
-      }).catch(() => {});
-      loadUrl(targetUrl)
-        .then(() => updateRuntimeState({ currentUrl: getSafeWebviewUrl() || targetUrl }, "Popup URL intercepted"))
-        .catch((error) =>
-          appendLog("webview_popup_intercept_failed", {
-            targetUrl,
-            message: error?.message || String(error || "Unknown popup interception error")
-          }).catch(() => {})
-        );
-    });
+    detachWebviewWindowOpenListener = window.desktopApi.onWebviewWindowOpen(
+      (payload) => {
+        const targetUrl = String(payload?.targetUrl || "").trim();
+        if (!targetUrl) {
+          return;
+        }
+        appendLog("webview_popup_intercepted_main", {
+          targetUrl,
+          sourceUrl: payload?.sourceUrl || getSafeWebviewUrl() || null,
+        }).catch(() => {});
+        loadUrl(targetUrl)
+          .then(() =>
+            updateRuntimeState(
+              { currentUrl: getSafeWebviewUrl() || targetUrl },
+              "Popup URL intercepted",
+            ),
+          )
+          .catch((error) =>
+            appendLog("webview_popup_intercept_failed", {
+              targetUrl,
+              message:
+                error?.message ||
+                String(error || "Unknown popup interception error"),
+            }).catch(() => {}),
+          );
+      },
+    );
   }
   if (typeof window.desktopApi.onWebviewJsDialog === "function") {
     if (typeof detachWebviewJsDialogListener === "function") {
       detachWebviewJsDialogListener();
     }
-    detachWebviewJsDialogListener = window.desktopApi.onWebviewJsDialog((payload) => {
-      const dialogType = String(payload?.dialogType || "unknown");
-      appendLog("webview_js_dialog_auto_accepted", {
-        dialogType,
-        message: String(payload?.message || "").slice(0, 300),
-        url: payload?.url || getSafeWebviewUrl() || null
-      }).catch(() => {});
-      updateRuntimeState(
-        { currentUrl: payload?.url || getSafeWebviewUrl() || null },
-        `Auto-accepted ${dialogType} dialog`
-      ).catch(() => {});
-    });
+    detachWebviewJsDialogListener = window.desktopApi.onWebviewJsDialog(
+      (payload) => {
+        const dialogType = String(payload?.dialogType || "unknown");
+        appendLog("webview_js_dialog_auto_accepted", {
+          dialogType,
+          message: String(payload?.message || "").slice(0, 300),
+          url: payload?.url || getSafeWebviewUrl() || null,
+        }).catch(() => {});
+        updateRuntimeState(
+          { currentUrl: payload?.url || getSafeWebviewUrl() || null },
+          `Auto-accepted ${dialogType} dialog`,
+        ).catch(() => {});
+      },
+    );
   }
 
   const markReady = () => {
@@ -4698,14 +5508,14 @@ function setupEmbeddedBrowser() {
     appendLog("webview_did_start_navigation", {
       url: event?.url || getSafeWebviewUrl(),
       isMainFrame: Boolean(event?.isMainFrame),
-      isInPlace: Boolean(event?.isInPlace)
+      isInPlace: Boolean(event?.isInPlace),
     }).catch(() => {});
   });
   webview.addEventListener("did-redirect-navigation", (event) => {
     appendLog("webview_did_redirect_navigation", {
       url: event?.url || getSafeWebviewUrl(),
       isMainFrame: Boolean(event?.isMainFrame),
-      isInPlace: Boolean(event?.isInPlace)
+      isInPlace: Boolean(event?.isInPlace),
     }).catch(() => {});
   });
   webview.addEventListener("new-window", (event) => {
@@ -4718,32 +5528,49 @@ function setupEmbeddedBrowser() {
     }
     appendLog("webview_popup_intercepted", {
       targetUrl,
-      sourceUrl: getSafeWebviewUrl() || null
+      sourceUrl: getSafeWebviewUrl() || null,
     }).catch(() => {});
     loadUrl(targetUrl)
-      .then(() => updateRuntimeState({ currentUrl: getSafeWebviewUrl() || targetUrl }, "Popup URL intercepted"))
+      .then(() =>
+        updateRuntimeState(
+          { currentUrl: getSafeWebviewUrl() || targetUrl },
+          "Popup URL intercepted",
+        ),
+      )
       .catch((error) =>
         appendLog("webview_popup_intercept_failed", {
           targetUrl,
-          message: error?.message || String(error || "Unknown popup interception error")
-        }).catch(() => {})
+          message:
+            error?.message ||
+            String(error || "Unknown popup interception error"),
+        }).catch(() => {}),
       );
   });
   webview.addEventListener("dom-ready", () => {
     syncEmbeddedUrl();
-    appendLog("webview_dom_ready", { url: getSafeWebviewUrl() }).catch(() => {});
+    appendLog("webview_dom_ready", { url: getSafeWebviewUrl() }).catch(
+      () => {},
+    );
     markReady();
   });
   webview.addEventListener("did-finish-load", syncEmbeddedUrl);
   webview.addEventListener("did-start-loading", () => {
-    appendLog("webview_did_start_loading", { url: getSafeWebviewUrl() }).catch(() => {});
+    appendLog("webview_did_start_loading", { url: getSafeWebviewUrl() }).catch(
+      () => {},
+    );
   });
   webview.addEventListener("did-stop-loading", () => {
-    appendLog("webview_did_stop_loading", { url: getSafeWebviewUrl() }).catch(() => {});
+    appendLog("webview_did_stop_loading", { url: getSafeWebviewUrl() }).catch(
+      () => {},
+    );
   });
   webview.addEventListener("did-fail-load", (event) => {
-    const abortDetails = getWebviewAbortMetadata(event, event?.validatedURL || getSafeWebviewUrl());
-    const expectedAbort = event.errorCode === -3 || shouldTreatAsExpectedWebviewAbort(event);
+    const abortDetails = getWebviewAbortMetadata(
+      event,
+      event?.validatedURL || getSafeWebviewUrl(),
+    );
+    const expectedAbort =
+      event.errorCode === -3 || shouldTreatAsExpectedWebviewAbort(event);
 
     if (expectedAbort) {
       const dedupeKey = `${abortDetails.url || "unknown"}:${abortDetails.code || event.errorCode || "-3"}`;
@@ -4760,18 +5587,23 @@ function setupEmbeddedBrowser() {
           code: abortDetails.code || event.errorCode || null,
           errno: abortDetails.errno ?? event.errorCode ?? null,
           loadingMatch: abortDetails.loadingMatch,
-          count: webviewAbortStatsByUrl[abortDetails.url || "unknown"]
+          count: webviewAbortStatsByUrl[abortDetails.url || "unknown"],
         }).catch(() => {});
       }
       return;
     }
 
-    if (String(abortDetails.message || "").toUpperCase().includes("ABORT")) {
+    if (
+      String(abortDetails.message || "")
+        .toUpperCase()
+        .includes("ABORT")
+    ) {
       appendLog("webview_load_abort_unresolved", {
         url: abortDetails.url,
         code: abortDetails.code || event.errorCode || null,
         errno: abortDetails.errno ?? event.errorCode ?? null,
-        message: abortDetails.message || event.errorDescription || "Unknown abort"
+        message:
+          abortDetails.message || event.errorDescription || "Unknown abort",
       }).catch(() => {});
     }
 
@@ -4785,10 +5617,15 @@ function setupEmbeddedBrowser() {
     }
     appendLog("webview_did_fail_load", {
       message: event.errorDescription,
-      url: event.validatedURL || getSafeWebviewUrl()
+      url: event.validatedURL || getSafeWebviewUrl(),
     }).catch(() => {});
     markFailed(event.errorDescription || "Embedded browser failed to load.");
-    console.error("Embedded browser load failed:", event.errorCode, event.errorDescription, event.validatedURL);
+    console.error(
+      "Embedded browser load failed:",
+      event.errorCode,
+      event.errorDescription,
+      event.validatedURL,
+    );
   });
   webview.addEventListener("console-message", (event) => {
     const messageText = `[${event.level}] ${event.message}`;
@@ -4797,18 +5634,22 @@ function setupEmbeddedBrowser() {
     }
     appendLog("webview_console_message", {
       message: messageText,
-      url: getSafeWebviewUrl()
+      url: getSafeWebviewUrl(),
     }).catch(() => {});
   });
   webview.addEventListener("render-process-gone", (event) => {
     appendLog("webview_render_process_gone", {
       message: event.details?.reason || "unknown",
-      url: getSafeWebviewUrl()
+      url: getSafeWebviewUrl(),
     }).catch(() => {});
-    markFailed(`Embedded browser render process gone: ${event.details?.reason || "unknown"}`);
+    markFailed(
+      `Embedded browser render process gone: ${event.details?.reason || "unknown"}`,
+    );
   });
   webview.addEventListener("destroyed", () => {
-    appendLog("webview_destroyed", { url: getSafeWebviewUrl() }).catch(() => {});
+    appendLog("webview_destroyed", { url: getSafeWebviewUrl() }).catch(
+      () => {},
+    );
     markFailed("Embedded browser was destroyed.");
   });
 
@@ -4821,7 +5662,9 @@ function setupEmbeddedBrowser() {
   window.setTimeout(() => {
     if (!embeddedAutomation.webviewReady) {
       markFailed("Embedded browser did not become ready in time.");
-      appendLog("webview_ready_timeout", { url: getSafeWebviewUrl() }).catch(() => {});
+      appendLog("webview_ready_timeout", { url: getSafeWebviewUrl() }).catch(
+        () => {},
+      );
     }
   }, WEBVIEW_READY_TIMEOUT_MS);
 
@@ -4834,51 +5677,115 @@ async function boot() {
   loadUiTelemetry();
   wireTabNavigation();
   wireHelpSystem();
-  document.getElementById("startBotBtn").addEventListener("click", handleStartBot);
-  document.getElementById("testLoginOnlyBtn").addEventListener("click", handleTestLoginOnly);
-  document.getElementById("syncStatsBtn").addEventListener("click", handleSyncWebsiteStats);
-  document.getElementById("stopBotBtn").addEventListener("click", handleStopBot);
-  document.getElementById("refreshBtn").addEventListener("click", refreshDashboard);
-  document.getElementById("saveSettingsBtn").addEventListener("click", handleSaveSettings);
-  document.getElementById("testDiscordWebhookBtn")?.addEventListener("click", handleTestDiscordWebhook);
-  document.getElementById("testSettingsBtn").addEventListener("click", handleTestSettings);
-  document.getElementById("previewSettingsBtn").addEventListener("click", toggleSettingsPreview);
-  document.getElementById("presetSafeBtn").addEventListener("click", () => applyPreset("safe"));
-  document.getElementById("presetBalancedBtn").addEventListener("click", () => applyPreset("balanced"));
-  document.getElementById("presetFastBtn").addEventListener("click", () => applyPreset("fast"));
-  document.getElementById("logFilter").addEventListener("input", () => renderLogs(fullLogs));
-  document.getElementById("exportLogsBtn").addEventListener("click", exportCurrentLogs);
-  document.getElementById("exportSupportBundleBtn").addEventListener("click", exportSupportBundle);
-  document.getElementById("quickStartBtn").addEventListener("click", handleStartBot);
-  document.getElementById("quickStopBtn").addEventListener("click", handleStopBot);
-  document.getElementById("quickSyncBtn").addEventListener("click", handleSyncWebsiteStats);
-  document.getElementById("quickExportBundleBtn").addEventListener("click", exportSupportBundle);
-  document.getElementById("runAtTimeBtn").addEventListener("click", handleRunAtTime);
-  document.getElementById("cancelScheduledRunBtn").addEventListener("click", handleCancelScheduledRun);
-  document.getElementById("automationApplyScheduleBtn")?.addEventListener("click", handleApplyAutomationSchedule);
-  document.getElementById("automationDisableScheduleBtn")?.addEventListener("click", handleDisableAutomationSchedule);
-  document.getElementById("saveProfileBtn").addEventListener("click", saveCurrentProfile);
-  document.getElementById("applyProfileBtn").addEventListener("click", applySavedProfile);
-  document.getElementById("dismissOnboardingBtn").addEventListener("click", dismissOnboarding);
-  document.getElementById("skipOnboardingOverlayBtn").addEventListener("click", dismissOnboarding);
-  document.getElementById("openOnboardingTabBtn").addEventListener("click", () => {
-    document.querySelector('.nav-btn[data-tab="onboarding"]')?.click();
-    dismissOnboarding();
-  });
-  document.getElementById("resetOnboardingBtn").addEventListener("click", () => {
-    localStorage.removeItem(ONBOARDING_STATE_KEY);
-    renderOnboarding();
-  });
-  document.getElementById("autoSwapRangeBtn").addEventListener("click", autoSwapSessionRange);
-  Array.from(document.querySelectorAll(".chip-btn[data-log-group]")).forEach((button) => {
-    button.addEventListener("click", () => {
-      activeLogGroup = button.getAttribute("data-log-group") || "all";
-      Array.from(document.querySelectorAll(".chip-btn[data-log-group]")).forEach((chip) =>
-        chip.classList.toggle("chip-active", chip === button)
-      );
-      renderLogs(fullLogs);
+  document
+    .getElementById("startBotBtn")
+    .addEventListener("click", handleStartBot);
+  document
+    .getElementById("testLoginOnlyBtn")
+    .addEventListener("click", handleTestLoginOnly);
+  document
+    .getElementById("syncStatsBtn")
+    .addEventListener("click", handleSyncWebsiteStats);
+  document
+    .getElementById("stopBotBtn")
+    .addEventListener("click", handleStopBot);
+  document
+    .getElementById("refreshBtn")
+    .addEventListener("click", refreshDashboard);
+  document
+    .getElementById("saveSettingsBtn")
+    .addEventListener("click", handleSaveSettings);
+  document
+    .getElementById("testDiscordWebhookBtn")
+    ?.addEventListener("click", handleTestDiscordWebhook);
+  document
+    .getElementById("testSettingsBtn")
+    .addEventListener("click", handleTestSettings);
+  document
+    .getElementById("previewSettingsBtn")
+    .addEventListener("click", toggleSettingsPreview);
+  document
+    .getElementById("presetSafeBtn")
+    .addEventListener("click", () => applyPreset("safe"));
+  document
+    .getElementById("presetBalancedBtn")
+    .addEventListener("click", () => applyPreset("balanced"));
+  document
+    .getElementById("presetFastBtn")
+    .addEventListener("click", () => applyPreset("fast"));
+  document
+    .getElementById("logFilter")
+    .addEventListener("input", () => renderLogs(fullLogs));
+  document
+    .getElementById("exportLogsBtn")
+    .addEventListener("click", exportCurrentLogs);
+  document
+    .getElementById("exportSupportBundleBtn")
+    .addEventListener("click", exportSupportBundle);
+  document
+    .getElementById("quickStartBtn")
+    .addEventListener("click", handleStartBot);
+  document
+    .getElementById("quickStopBtn")
+    .addEventListener("click", handleStopBot);
+  document
+    .getElementById("quickSyncBtn")
+    .addEventListener("click", handleSyncWebsiteStats);
+  document
+    .getElementById("quickExportBundleBtn")
+    .addEventListener("click", exportSupportBundle);
+  document
+    .getElementById("runAtTimeBtn")
+    .addEventListener("click", handleRunAtTime);
+  document
+    .getElementById("cancelScheduledRunBtn")
+    .addEventListener("click", handleCancelScheduledRun);
+  document
+    .getElementById("automationApplyScheduleBtn")
+    ?.addEventListener("click", handleApplyAutomationSchedule);
+  document
+    .getElementById("automationDisableScheduleBtn")
+    ?.addEventListener("click", handleDisableAutomationSchedule);
+  document
+    .getElementById("saveProfileBtn")
+    .addEventListener("click", saveCurrentProfile);
+  document
+    .getElementById("applyProfileBtn")
+    .addEventListener("click", applySavedProfile);
+  document
+    .getElementById("dismissOnboardingBtn")
+    .addEventListener("click", dismissOnboarding);
+  document
+    .getElementById("skipOnboardingOverlayBtn")
+    .addEventListener("click", dismissOnboarding);
+  document
+    .getElementById("openOnboardingTabBtn")
+    .addEventListener("click", () => {
+      document.querySelector('.nav-btn[data-tab="onboarding"]')?.click();
+      dismissOnboarding();
     });
-  });
+  document
+    .getElementById("resetOnboardingBtn")
+    .addEventListener("click", () => {
+      localStorage.removeItem(ONBOARDING_STATE_KEY);
+      renderOnboarding();
+    });
+  document
+    .getElementById("autoSwapRangeBtn")
+    .addEventListener("click", autoSwapSessionRange);
+  Array.from(document.querySelectorAll(".chip-btn[data-log-group]")).forEach(
+    (button) => {
+      button.addEventListener("click", () => {
+        activeLogGroup = button.getAttribute("data-log-group") || "all";
+        Array.from(
+          document.querySelectorAll(".chip-btn[data-log-group]"),
+        ).forEach((chip) =>
+          chip.classList.toggle("chip-active", chip === button),
+        );
+        renderLogs(fullLogs);
+      });
+    },
+  );
   [
     "settingsDashboardPort",
     "settingsSlowMo",
@@ -4892,7 +5799,7 @@ async function boot() {
     "notifDiscordEnabled",
     "discordWebhookUrl",
     "notifDiscordVerbose",
-    "notifDiscordVerboseFlushSeconds"
+    "notifDiscordVerboseFlushSeconds",
   ].forEach((id) => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -4921,7 +5828,7 @@ async function boot() {
     "verboseWebviewConsole",
     "settingsSimpleMode",
     "settingsLightTheme",
-    "settingsDirectCourseMode"
+    "settingsDirectCourseMode",
   ].forEach((id) => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -4935,22 +5842,34 @@ async function boot() {
   });
   await loadSettingsIntoUi();
   const scheduleTimeInput = document.getElementById("scheduleTimeInput");
-  if (scheduleTimeInput && document.getElementById("settingsDefaultRunAtTime")) {
-    scheduleTimeInput.value = document.getElementById("settingsDefaultRunAtTime").value || "17:40";
+  if (
+    scheduleTimeInput &&
+    document.getElementById("settingsDefaultRunAtTime")
+  ) {
+    scheduleTimeInput.value =
+      document.getElementById("settingsDefaultRunAtTime").value || "17:40";
   }
   renderSavedProfilesSelect();
   renderOnboarding();
   setupEmbeddedBrowser();
   await refreshDashboard();
-  embeddedAutomation.refreshIntervalId = window.setInterval(refreshDashboard, 3000);
+  embeddedAutomation.refreshIntervalId = window.setInterval(
+    refreshDashboard,
+    3000,
+  );
 }
 
 window.addEventListener("error", (event) => {
-  recordRendererError("renderer_window_error", event.error || event.message).catch(() => {});
+  recordRendererError(
+    "renderer_window_error",
+    event.error || event.message,
+  ).catch(() => {});
 });
 
 window.addEventListener("unhandledrejection", (event) => {
-  recordRendererError("renderer_unhandled_rejection", event.reason).catch(() => {});
+  recordRendererError("renderer_unhandled_rejection", event.reason).catch(
+    () => {},
+  );
 });
 
 boot();

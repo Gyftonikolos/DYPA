@@ -3,7 +3,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 
-const SETTINGS_VERSION = 7;
+const SETTINGS_VERSION = 8;
 
 const DEFAULT_SETTINGS = {
   baseUrl: null,
@@ -30,29 +30,30 @@ const DEFAULT_SETTINGS = {
       discordWebhookEnabled: false,
       discordWebhookUrl: "",
       discordVerbose: false,
-      discordVerboseFlushSeconds: 20
+      discordVerboseFlushSeconds: 20,
     },
     logging: {
-      verboseWebviewConsole: false
+      verboseWebviewConsole: false,
     },
     ui: {
       simpleMode: false,
-      lightTheme: false
+      lightTheme: false,
     },
     navigation: {
-      directCourseMode: false
-    }
+      directCourseMode: false,
+    },
   },
   scheduler: {
+    enabled: false,
     defaultRunAtLocalTime: "17:40",
     allowedWindowsCsv: "",
     nightTargetMinutes: 120,
-    nightJitterMinutes: 15
+    nightJitterMinutes: 15,
   },
   credentials: {
     username: "",
-    password: ""
-  }
+    password: "",
+  },
 };
 
 function getSettingsDir() {
@@ -67,7 +68,7 @@ function getSettingsPaths() {
   const baseDir = getSettingsDir();
   return {
     settingsPath: path.join(baseDir, "app-settings.json"),
-    keyPath: path.join(baseDir, "app-settings.key")
+    keyPath: path.join(baseDir, "app-settings.key"),
   };
 }
 
@@ -95,7 +96,10 @@ function encryptSecret(plainText) {
   const key = getOrCreateKey();
   const iv = crypto.randomBytes(12);
   const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
-  const encrypted = Buffer.concat([cipher.update(String(plainText || ""), "utf8"), cipher.final()]);
+  const encrypted = Buffer.concat([
+    cipher.update(String(plainText || ""), "utf8"),
+    cipher.final(),
+  ]);
   const authTag = cipher.getAuthTag();
   return Buffer.concat([iv, authTag, encrypted]).toString("base64");
 }
@@ -121,7 +125,7 @@ function readRawSettings() {
     version: SETTINGS_VERSION,
     updatedAt: null,
     config: { ...DEFAULT_SETTINGS, credentials: undefined },
-    secrets: {}
+    secrets: {},
   };
   if (!fs.existsSync(settingsPath)) {
     return empty;
@@ -140,12 +144,14 @@ function migrateRawSettings(rawInput) {
     version: Number.isFinite(Number(raw.version)) ? Number(raw.version) : 1,
     updatedAt: raw.updatedAt || null,
     config: { ...(raw.config || {}) },
-    secrets: { ...(raw.secrets || {}) }
+    secrets: { ...(raw.secrets || {}) },
   };
 
   if (migrated.version < 2) {
     const rangeFallback = Number(
-      migrated.config.maxScormSessionMinutes || migrated.config.scormSessionMinutes || 40
+      migrated.config.maxScormSessionMinutes ||
+        migrated.config.scormSessionMinutes ||
+        40,
     );
     if (
       !Number.isFinite(Number(migrated.config.scormSessionMinMinutes)) ||
@@ -168,7 +174,10 @@ function migrateRawSettings(rawInput) {
     migrated.version = 3;
   }
   if (migrated.version < 4) {
-    if (!migrated.config.scheduler || typeof migrated.config.scheduler !== "object") {
+    if (
+      !migrated.config.scheduler ||
+      typeof migrated.config.scheduler !== "object"
+    ) {
       migrated.config.scheduler = { defaultRunAtLocalTime: "17:40" };
     }
     if (!migrated.config.scheduler.defaultRunAtLocalTime) {
@@ -177,8 +186,14 @@ function migrateRawSettings(rawInput) {
     migrated.version = 4;
   }
   if (migrated.version < 5) {
-    if (!migrated.config.scheduler || typeof migrated.config.scheduler !== "object") {
-      migrated.config.scheduler = { defaultRunAtLocalTime: "17:40", allowedWindowsCsv: "" };
+    if (
+      !migrated.config.scheduler ||
+      typeof migrated.config.scheduler !== "object"
+    ) {
+      migrated.config.scheduler = {
+        defaultRunAtLocalTime: "17:40",
+        allowedWindowsCsv: "",
+      };
     }
     if (!Object.hasOwn(migrated.config.scheduler, "allowedWindowsCsv")) {
       migrated.config.scheduler.allowedWindowsCsv = "";
@@ -192,34 +207,87 @@ function migrateRawSettings(rawInput) {
     migrated.version = 5;
   }
   if (migrated.version < 6) {
-    if (!migrated.config.featureFlags || typeof migrated.config.featureFlags !== "object") {
+    if (
+      !migrated.config.featureFlags ||
+      typeof migrated.config.featureFlags !== "object"
+    ) {
       migrated.config.featureFlags = {};
     }
-    if (!migrated.config.featureFlags.notifications || typeof migrated.config.featureFlags.notifications !== "object") {
+    if (
+      !migrated.config.featureFlags.notifications ||
+      typeof migrated.config.featureFlags.notifications !== "object"
+    ) {
       migrated.config.featureFlags.notifications = {};
     }
-    if (!Object.hasOwn(migrated.config.featureFlags.notifications, "discordWebhookEnabled")) {
+    if (
+      !Object.hasOwn(
+        migrated.config.featureFlags.notifications,
+        "discordWebhookEnabled",
+      )
+    ) {
       migrated.config.featureFlags.notifications.discordWebhookEnabled = false;
     }
-    if (!Object.hasOwn(migrated.config.featureFlags.notifications, "discordWebhookUrl")) {
+    if (
+      !Object.hasOwn(
+        migrated.config.featureFlags.notifications,
+        "discordWebhookUrl",
+      )
+    ) {
       migrated.config.featureFlags.notifications.discordWebhookUrl = "";
     }
     migrated.version = 6;
   }
   if (migrated.version < 7) {
-    if (!migrated.config.featureFlags || typeof migrated.config.featureFlags !== "object") {
+    if (
+      !migrated.config.featureFlags ||
+      typeof migrated.config.featureFlags !== "object"
+    ) {
       migrated.config.featureFlags = {};
     }
-    if (!migrated.config.featureFlags.notifications || typeof migrated.config.featureFlags.notifications !== "object") {
+    if (
+      !migrated.config.featureFlags.notifications ||
+      typeof migrated.config.featureFlags.notifications !== "object"
+    ) {
       migrated.config.featureFlags.notifications = {};
     }
-    if (!Object.hasOwn(migrated.config.featureFlags.notifications, "discordVerbose")) {
+    if (
+      !Object.hasOwn(
+        migrated.config.featureFlags.notifications,
+        "discordVerbose",
+      )
+    ) {
       migrated.config.featureFlags.notifications.discordVerbose = false;
     }
-    if (!Object.hasOwn(migrated.config.featureFlags.notifications, "discordVerboseFlushSeconds")) {
+    if (
+      !Object.hasOwn(
+        migrated.config.featureFlags.notifications,
+        "discordVerboseFlushSeconds",
+      )
+    ) {
       migrated.config.featureFlags.notifications.discordVerboseFlushSeconds = 20;
     }
     migrated.version = 7;
+  }
+  if (migrated.version < 8) {
+    if (
+      !migrated.config.scheduler ||
+      typeof migrated.config.scheduler !== "object"
+    ) {
+      migrated.config.scheduler = {
+        enabled: false,
+        defaultRunAtLocalTime: "17:40",
+        allowedWindowsCsv: "",
+        nightTargetMinutes: 120,
+        nightJitterMinutes: 15,
+      };
+    }
+    if (!Object.hasOwn(migrated.config.scheduler, "enabled")) {
+      const hasWindows =
+        String(migrated.config.scheduler.allowedWindowsCsv || "").trim()
+          .length > 0;
+      migrated.config.scheduler.enabled = hasWindows;
+    }
+    migrated.version = 8;
   }
 
   return migrated;
@@ -227,24 +295,37 @@ function migrateRawSettings(rawInput) {
 
 function loadSettings() {
   const raw = migrateRawSettings(readRawSettings());
-  const password = raw.secrets?.golearnPassword ? decryptSecret(raw.secrets.golearnPassword) : "";
+  const password = raw.secrets?.golearnPassword
+    ? decryptSecret(raw.secrets.golearnPassword)
+    : "";
   const merged = {
     ...DEFAULT_SETTINGS,
     ...(raw.config || {}),
     credentials: {
       username: raw.config?.credentials?.username || "",
-      password
-    }
+      password,
+    },
   };
 
-  const migratedRangeFallback = Number(raw.config?.maxScormSessionMinutes || raw.config?.scormSessionMinutes || 40);
-  if (!Number.isFinite(Number(merged.scormSessionMinMinutes)) || Number(merged.scormSessionMinMinutes) <= 0) {
+  const migratedRangeFallback = Number(
+    raw.config?.maxScormSessionMinutes || raw.config?.scormSessionMinutes || 40,
+  );
+  if (
+    !Number.isFinite(Number(merged.scormSessionMinMinutes)) ||
+    Number(merged.scormSessionMinMinutes) <= 0
+  ) {
     merged.scormSessionMinMinutes = migratedRangeFallback;
   }
-  if (!Number.isFinite(Number(merged.scormSessionMaxMinutes)) || Number(merged.scormSessionMaxMinutes) <= 0) {
+  if (
+    !Number.isFinite(Number(merged.scormSessionMaxMinutes)) ||
+    Number(merged.scormSessionMaxMinutes) <= 0
+  ) {
     merged.scormSessionMaxMinutes = migratedRangeFallback;
   }
-  if (Number(merged.scormSessionMaxMinutes) < Number(merged.scormSessionMinMinutes)) {
+  if (
+    Number(merged.scormSessionMaxMinutes) <
+    Number(merged.scormSessionMinMinutes)
+  ) {
     merged.scormSessionMaxMinutes = Number(merged.scormSessionMinMinutes);
   }
 
@@ -260,7 +341,10 @@ function saveSettings(nextSettings) {
   const { settingsPath } = getSettingsPaths();
   const currentRaw = readRawSettings();
   const previousEncryptedPassword = currentRaw.secrets?.golearnPassword || "";
-  const passwordProvided = Object.prototype.hasOwnProperty.call(nextSettings.credentials || {}, "password");
+  const passwordProvided = Object.prototype.hasOwnProperty.call(
+    nextSettings.credentials || {},
+    "password",
+  );
   const nextPassword = passwordProvided
     ? String(nextSettings.credentials.password || "")
     : decryptSecret(previousEncryptedPassword || "");
@@ -270,8 +354,8 @@ function saveSettings(nextSettings) {
     ...nextSettings,
     credentials: {
       username: String(nextSettings.credentials?.username || ""),
-      password: undefined
-    }
+      password: undefined,
+    },
   };
 
   const rawPayload = {
@@ -279,11 +363,15 @@ function saveSettings(nextSettings) {
     updatedAt: new Date().toISOString(),
     config: configPayload,
     secrets: {
-      golearnPassword: nextPassword ? encryptSecret(nextPassword) : ""
-    }
+      golearnPassword: nextPassword ? encryptSecret(nextPassword) : "",
+    },
   };
 
-  fs.writeFileSync(settingsPath, `${JSON.stringify(rawPayload, null, 2)}\n`, "utf8");
+  fs.writeFileSync(
+    settingsPath,
+    `${JSON.stringify(rawPayload, null, 2)}\n`,
+    "utf8",
+  );
   return loadSettings();
 }
 
@@ -292,8 +380,8 @@ function sanitizeForRenderer(settings) {
     ...settings,
     credentials: {
       username: settings.credentials?.username || "",
-      password: settings.credentials?.password || ""
-    }
+      password: settings.credentials?.password || "",
+    },
   };
 }
 
@@ -304,5 +392,5 @@ module.exports = {
   loadSettings,
   saveSettings,
   sanitizeForRenderer,
-  migrateRawSettings
+  migrateRawSettings,
 };

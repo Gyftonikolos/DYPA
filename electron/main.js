@@ -1039,7 +1039,7 @@ app.whenReady().then(() => {
       return;
     }
     const staleMs = Date.now() - new Date(heartbeatAt).getTime();
-    if (Number.isFinite(staleMs) && staleMs > 120_000) {
+    if (Number.isFinite(staleMs) && staleMs > 300_000) {
       appendJsonLine(config.sessionLogPath, {
         event: "stale_run_detected",
         warningCode: "HEARTBEAT_STALE",
