@@ -64,9 +64,17 @@ function col(color, text) {
 
 function fmtMinutes(m) {
   if (!Number.isFinite(m)) return "-";
-  const h = Math.floor(m / 60);
-  const min = m % 60;
-  return h > 0 ? `${h}h ${min}m` : `${min}m`;
+  const normalized = Math.round(m * 100) / 100;
+  const hours = Math.floor(normalized / 60);
+  const minutes = normalized - hours * 60;
+  const minutesText = Number.isInteger(minutes)
+    ? String(minutes)
+    : minutes.toFixed(2);
+  return hours > 0 ? `${hours}h ${minutesText}m` : `${minutesText}m`;
+}
+
+function cell(color, text, width) {
+  return col(color, String(text).padEnd(width));
 }
 
 function fmtDate(iso) {
@@ -661,7 +669,7 @@ async function manageChapter() {
     }
 
     console.log(
-      `\n  ${col("bold", "#")}  ${col("bold", "Key")}   ${col("bold", "Completed")}   ${col("bold", "Target")}      ${col("bold", "Progress")}`,
+      `\n  ${cell("bold", "#", 3)} ${cell("bold", "Key", 4)} ${cell("bold", "Completed", 13)} ${cell("bold", "Target", 13)} ${cell("bold", "Progress", 20)}`,
     );
     console.log(hr());
     for (const [i, cfg] of LESSON_SECTION_CONFIG.entries()) {
@@ -672,7 +680,7 @@ async function manageChapter() {
       const done = pct >= 100;
       const c = done ? "green" : pct > 0 ? "yellow" : "gray";
       console.log(
-        `  ${col("yellow", String(i + 1))}  ${col(c, cfg.lessonKey)}    ${String(fmtMinutes(completed)).padEnd(10)} ${String(fmtMinutes(target)).padEnd(10)} ${bar(completed, target, 16)} ${col("gray", `${pct}%`)}${done ? col("green", " ✓ DONE") : ""}`,
+        `  ${cell("yellow", String(i + 1), 3)} ${cell(c, cfg.lessonKey, 4)} ${cell("white", fmtMinutes(completed), 13)} ${cell("white", fmtMinutes(target), 13)} ${bar(completed, target, 16)} ${cell("gray", `${pct}%`, 4)}${done ? col("green", " ✓ DONE") : ""}`,
       );
     }
 
@@ -688,12 +696,17 @@ async function manageChapter() {
 
     console.log();
     console.log(
-      `  Chapter ${col("bold", cfg.lessonKey)} (section ${cfg.id})  —  ${col("white", fmtMinutes(currentMinutes))} / ${fmtMinutes(targetMinutes)}`,
+      `  Chapter ${cell("bold", cfg.lessonKey, 4)} (section ${cfg.id})  —  ${cell("white", fmtMinutes(currentMinutes), 11)} / ${fmtMinutes(targetMinutes)}`,
     );
     console.log();
-    console.log(`  ${col("yellow", "a")}  Set to exact minutes`);
-    console.log(`  ${col("yellow", "b")}  Mark as fully complete  ${col("gray", `(${fmtMinutes(targetMinutes)})`)}   ${col("green", "← skip this chapter")}`);
-    console.log(`  ${col("yellow", "c")}  Reset to 0`);
+    console.log(
+      `  ${col("yellow", "a")}  Use this chapter next  ${col("green", "← no stats change")}`,
+    );
+    console.log(`  ${col("yellow", "b")}  Set to exact minutes`);
+    console.log(
+      `  ${col("yellow", "c")}  Mark as fully complete  ${col("gray", `(${fmtMinutes(targetMinutes)})`)}`,
+    );
+    console.log(`  ${col("yellow", "d")}  Reset to 0`);
     console.log(`  ${col("yellow", "0")}  Back`);
     console.log();
 
@@ -704,7 +717,27 @@ async function manageChapter() {
     let logEvent = "";
 
     if (action === "a") {
-      const raw = await ask(`Enter completed minutes [current: ${currentMinutes}]:`);
+      try {
+        ps.preferredSectionId = cfg.id;
+        saveProgressState(ps);
+        appendSessionLog(SESSION_LOG_PATH, {
+          event: "cli_preferred_chapter_selected",
+          sectionId: cfg.id,
+          lessonKey: cfg.lessonKey,
+          selectedAt: new Date().toISOString(),
+        });
+        ok(
+          `${cfg.lessonKey} selected as the next chapter. Stats were not changed.`,
+        );
+      } catch (e) {
+        err(`Failed: ${e.message}`);
+      }
+      await ask("Press Enter to continue...");
+      continue;
+    } else if (action === "b") {
+      const raw = await ask(
+        `Enter completed minutes [current: ${currentMinutes}]:`,
+      );
       const val = Number(raw);
       if (!Number.isFinite(val) || val < 0) {
         warn("Invalid number.");
@@ -717,16 +750,24 @@ async function manageChapter() {
         newMinutes = val;
       }
       logEvent = "cli_lesson_set_minutes";
-    } else if (action === "b") {
+    } else if (action === "c") {
       const confirm = await ask(
         `Mark ${cfg.lessonKey} as 100% complete (${fmtMinutes(targetMinutes)})? [y/N]`,
       );
-      if (confirm.toLowerCase() !== "y") { note("Cancelled."); continue; }
+      if (confirm.toLowerCase() !== "y") {
+        note("Cancelled.");
+        continue;
+      }
       newMinutes = targetMinutes;
       logEvent = "cli_lesson_mark_complete";
-    } else if (action === "c") {
-      const confirm = await ask(`Reset ${cfg.lessonKey} to 0 minutes? Type YES:`);
-      if (confirm !== "YES") { note("Cancelled."); continue; }
+    } else if (action === "d") {
+      const confirm = await ask(
+        `Reset ${cfg.lessonKey} to 0 minutes? Type YES:`,
+      );
+      if (confirm !== "YES") {
+        note("Cancelled.");
+        continue;
+      }
       newMinutes = 0;
       logEvent = "cli_lesson_reset";
     } else {
@@ -739,7 +780,11 @@ async function manageChapter() {
     try {
       if (!ps.lessonProgress) ps.lessonProgress = {};
       if (!ps.lessonProgress[cfg.id]) {
-        ps.lessonProgress[cfg.id] = { targetHours: cfg.targetHours, completedMinutes: 0, updatedAt: null };
+        ps.lessonProgress[cfg.id] = {
+          targetHours: cfg.targetHours,
+          completedMinutes: 0,
+          updatedAt: null,
+        };
       }
       ps.lessonProgress[cfg.id].completedMinutes = newMinutes;
       ps.lessonProgress[cfg.id].updatedAt = new Date().toISOString();
@@ -752,7 +797,8 @@ async function manageChapter() {
         newMinutes,
         updatedAt: new Date().toISOString(),
       });
-      const pct = targetMinutes > 0 ? Math.round((newMinutes / targetMinutes) * 100) : 0;
+      const pct =
+        targetMinutes > 0 ? Math.round((newMinutes / targetMinutes) * 100) : 0;
       ok(
         `${cfg.lessonKey} set to ${fmtMinutes(newMinutes)} / ${fmtMinutes(targetMinutes)}  (${pct}%)${newMinutes >= targetMinutes ? "  — automation will skip this chapter." : ""}`,
       );

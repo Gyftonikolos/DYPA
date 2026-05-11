@@ -10,30 +10,33 @@ const DEFAULT_STATE = {
   scormSessionMaxMinutes: null,
   scormSessionMinutes: null,
   dailyScormLimitMinutes: null,
+  preferredSectionId: null,
   lastResolvedSectionId: null,
   lastScormStartedAt: null,
   lastScormExitedAt: null,
   lessonProgress: {},
   dailyProgress: {
     date: null,
-    completedMinutes: 0
+    completedMinutes: 0,
   },
   sessionLedger: {
-    appliedKeys: {}
+    appliedKeys: {},
   },
   stateVersion: 0,
-  updatedAt: null
+  updatedAt: null,
 };
 
 function getAbsolutePath(filePath) {
-  return path.isAbsolute(filePath) ? filePath : path.resolve(process.cwd(), filePath);
+  return path.isAbsolute(filePath)
+    ? filePath
+    : path.resolve(process.cwd(), filePath);
 }
 
 function appendSessionLog(filePath, entry) {
   const absolutePath = getAbsolutePath(filePath);
   const payload = {
     timestamp: new Date().toISOString(),
-    ...entry
+    ...entry,
   };
 
   fs.appendFileSync(absolutePath, `${JSON.stringify(payload)}\n`, "utf8");
@@ -41,12 +44,17 @@ function appendSessionLog(filePath, entry) {
 
 function validateAndClampProgressState(state, options = {}) {
   const warnings = [];
-  const dailyLimitMinutes = Number(options.dailyLimitMinutes || state.dailyScormLimitMinutes || 0);
+  const dailyLimitMinutes = Number(
+    options.dailyLimitMinutes || state.dailyScormLimitMinutes || 0,
+  );
 
-  if (!state.dailyProgress || !Number.isFinite(Number(state.dailyProgress.completedMinutes))) {
+  if (
+    !state.dailyProgress ||
+    !Number.isFinite(Number(state.dailyProgress.completedMinutes))
+  ) {
     state.dailyProgress = {
       date: getCurrentDayKey(),
-      completedMinutes: 0
+      completedMinutes: 0,
     };
     warnings.push({ type: "dailyProgress_invalid_reset" });
   }
@@ -56,9 +64,15 @@ function validateAndClampProgressState(state, options = {}) {
     warnings.push({ type: "dailyProgress_negative_clamped" });
   }
 
-  if (dailyLimitMinutes > 0 && Number(state.dailyProgress.completedMinutes) > dailyLimitMinutes) {
+  if (
+    dailyLimitMinutes > 0 &&
+    Number(state.dailyProgress.completedMinutes) > dailyLimitMinutes
+  ) {
     state.dailyProgress.completedMinutes = dailyLimitMinutes;
-    warnings.push({ type: "dailyProgress_over_limit_clamped", dailyLimitMinutes });
+    warnings.push({
+      type: "dailyProgress_over_limit_clamped",
+      dailyLimitMinutes,
+    });
   }
 
   if (state.lessonProgress && typeof state.lessonProgress === "object") {
@@ -72,9 +86,16 @@ function validateAndClampProgressState(state, options = {}) {
         lesson.completedMinutes = 0;
         warnings.push({ type: "lessonProgress_negative_clamped", sectionId });
       }
-      if (targetMinutes > 0 && Number(lesson.completedMinutes) > targetMinutes) {
+      if (
+        targetMinutes > 0 &&
+        Number(lesson.completedMinutes) > targetMinutes
+      ) {
         lesson.completedMinutes = targetMinutes;
-        warnings.push({ type: "lessonProgress_over_target_clamped", sectionId, targetMinutes });
+        warnings.push({
+          type: "lessonProgress_over_target_clamped",
+          sectionId,
+          targetMinutes,
+        });
       }
     }
   }
@@ -96,7 +117,8 @@ function loadProgressState(filePath) {
 
 function saveProgressState(state) {
   const { _path, ...serializableState } = state;
-  serializableState.stateVersion = Number(serializableState.stateVersion || 0) + 1;
+  serializableState.stateVersion =
+    Number(serializableState.stateVersion || 0) + 1;
   serializableState.updatedAt = new Date().toISOString();
   state.stateVersion = serializableState.stateVersion;
   state.updatedAt = serializableState.updatedAt;
@@ -107,13 +129,21 @@ function ensureSessionLedger(state) {
   if (!state.sessionLedger || typeof state.sessionLedger !== "object") {
     state.sessionLedger = { appliedKeys: {} };
   }
-  if (!state.sessionLedger.appliedKeys || typeof state.sessionLedger.appliedKeys !== "object") {
+  if (
+    !state.sessionLedger.appliedKeys ||
+    typeof state.sessionLedger.appliedKeys !== "object"
+  ) {
     state.sessionLedger.appliedKeys = {};
   }
   return state.sessionLedger;
 }
 
-function applySessionMinutesIdempotent(state, sessionId, checkpointKey, applyFn) {
+function applySessionMinutesIdempotent(
+  state,
+  sessionId,
+  checkpointKey,
+  applyFn,
+) {
   const ledger = ensureSessionLedger(state);
   const key = `${String(sessionId || "unknown")}:${String(checkpointKey || "final")}`;
   if (ledger.appliedKeys[key]) {
@@ -139,7 +169,7 @@ function getCurrentDayKey() {
     timeZone: "Europe/Athens",
     year: "numeric",
     month: "2-digit",
-    day: "2-digit"
+    day: "2-digit",
   }).format(new Date());
 }
 
@@ -152,12 +182,12 @@ function getAthensParts(date = new Date()) {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
-    hourCycle: "h23"
+    hourCycle: "h23",
   }).formatToParts(date);
   return Object.fromEntries(
     parts
       .filter((part) => part.type !== "literal")
-      .map((part) => [part.type, Number(part.value)])
+      .map((part) => [part.type, Number(part.value)]),
   );
 }
 
@@ -170,20 +200,27 @@ function getAthensOffsetMs(date = new Date()) {
     parts.hour,
     parts.minute,
     parts.second,
-    0
+    0,
   );
   return utcLikeAthens - date.getTime();
 }
 
 function getAthensDayStartMs(date = new Date()) {
   const parts = getAthensParts(date);
-  return Date.UTC(parts.year, parts.month - 1, parts.day, 0, 0, 0, 0) - getAthensOffsetMs(date);
+  return (
+    Date.UTC(parts.year, parts.month - 1, parts.day, 0, 0, 0, 0) -
+    getAthensOffsetMs(date)
+  );
 }
 
 function getCurrentAthensDayElapsedMinutes(startedAt, endedAt = new Date()) {
   const startMs = new Date(startedAt).getTime();
   const endMs = new Date(endedAt).getTime();
-  if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) {
+  if (
+    !Number.isFinite(startMs) ||
+    !Number.isFinite(endMs) ||
+    endMs <= startMs
+  ) {
     return 0;
   }
   const dayStartMs = getAthensDayStartMs(new Date(endMs));
@@ -192,9 +229,17 @@ function getCurrentAthensDayElapsedMinutes(startedAt, endedAt = new Date()) {
   return Math.floor(overlapMs / 60000);
 }
 
-function addCompletedMinutesSplitByCurrentAthensDay(state, plannedMinutes, startedAt, endedAt = new Date()) {
+function addCompletedMinutesSplitByCurrentAthensDay(
+  state,
+  plannedMinutes,
+  startedAt,
+  endedAt = new Date(),
+) {
   const dailyProgress = ensureDailyProgress(state);
-  const currentDayElapsedMinutes = getCurrentAthensDayElapsedMinutes(startedAt, endedAt);
+  const currentDayElapsedMinutes = getCurrentAthensDayElapsedMinutes(
+    startedAt,
+    endedAt,
+  );
   const startMs = new Date(startedAt).getTime();
   const endMs = new Date(endedAt).getTime();
   const fullElapsedMinutes =
@@ -211,8 +256,11 @@ function addCompletedMinutesSplitByCurrentAthensDay(state, plannedMinutes, start
           0,
           Math.min(
             targetPlannedMinutes,
-            Math.round((targetPlannedMinutes * currentDayElapsedMinutes) / fullElapsedMinutes)
-          )
+            Math.round(
+              (targetPlannedMinutes * currentDayElapsedMinutes) /
+                fullElapsedMinutes,
+            ),
+          ),
         )
       : 0;
 
@@ -223,7 +271,10 @@ function addCompletedMinutesSplitByCurrentAthensDay(state, plannedMinutes, start
   return {
     completedMinutesToday: dailyProgress.completedMinutes,
     minutesCountedToday,
-    minutesCountedPreviousDay: Math.max(0, targetPlannedMinutes - minutesCountedToday)
+    minutesCountedPreviousDay: Math.max(
+      0,
+      targetPlannedMinutes - minutesCountedToday,
+    ),
   };
 }
 
@@ -232,7 +283,7 @@ function ensureDailyProgress(state) {
   if (!state.dailyProgress || state.dailyProgress.date !== currentDay) {
     state.dailyProgress = {
       date: currentDay,
-      completedMinutes: 0
+      completedMinutes: 0,
     };
     saveProgressState(state);
   }
@@ -257,7 +308,7 @@ function ensureLessonProgress(state, sectionId, targetHours) {
     state.lessonProgress[sectionId] = {
       targetHours,
       completedMinutes: 0,
-      updatedAt: null
+      updatedAt: null,
     };
     saveProgressState(state);
   } else if (state.lessonProgress[sectionId].targetHours !== targetHours) {
@@ -281,7 +332,8 @@ function resolveSectionIndex(state, sectionCount) {
   const startedAtMs = new Date(state.startedAt).getTime();
   const lessonDurationMs = state.lessonDurationMinutes * 60 * 1000;
   const elapsedMs = Math.max(0, Date.now() - startedAtMs);
-  const elapsedSteps = lessonDurationMs > 0 ? Math.floor(elapsedMs / lessonDurationMs) : 0;
+  const elapsedSteps =
+    lessonDurationMs > 0 ? Math.floor(elapsedMs / lessonDurationMs) : 0;
   const rawIndex = state.baseSectionIndex + elapsedSteps;
 
   return Math.min(Math.max(rawIndex, 0), Math.max(sectionCount - 1, 0));
@@ -300,5 +352,5 @@ module.exports = {
   ensureLessonProgress,
   addCompletedLessonMinutes,
   applySessionMinutesIdempotent,
-  ensureSessionLedger
+  ensureSessionLedger,
 };

@@ -1,6 +1,8 @@
 function toLessonCandidate(section, progressState) {
   const sectionId = section?.id;
-  const progressEntry = sectionId ? progressState?.lessonProgress?.[sectionId] : null;
+  const progressEntry = sectionId
+    ? progressState?.lessonProgress?.[sectionId]
+    : null;
   const targetHoursFromProgress = Number(progressEntry?.targetHours);
   const targetHoursFromConfig = Number(section?.targetHours);
   const resolvedTargetHours =
@@ -11,19 +13,38 @@ function toLessonCandidate(section, progressState) {
     id: sectionId,
     lessonKey: section.lessonKey,
     completedMinutes: Number(progressEntry?.completedMinutes || 0),
-    targetMinutes: Number(resolvedTargetHours || 0) * 60
+    targetMinutes: Number(resolvedTargetHours || 0) * 60,
   };
 }
 
 function resolveLessonSelection(lessonSections, progressState) {
-  const candidates = (lessonSections || []).map((section) => toLessonCandidate(section, progressState));
+  const candidates = (lessonSections || []).map((section) =>
+    toLessonCandidate(section, progressState),
+  );
   if (candidates.length === 0) {
     return {
       selectedSectionId: null,
       selectedLessonKey: null,
       reason: "fallback_selected",
-      candidateSnapshot: []
+      candidateSnapshot: [],
     };
+  }
+
+  const preferredSectionId = String(
+    progressState?.preferredSectionId || "",
+  ).trim();
+  if (preferredSectionId) {
+    const preferred = candidates.find(
+      (candidate) => candidate.id === preferredSectionId,
+    );
+    if (preferred) {
+      return {
+        selectedSectionId: preferred.id,
+        selectedLessonKey: preferred.lessonKey,
+        reason: "manual_preferred_section",
+        candidateSnapshot: candidates,
+      };
+    }
   }
 
   let reason = "first_incomplete_in_sequence";
@@ -48,10 +69,10 @@ function resolveLessonSelection(lessonSections, progressState) {
     selectedSectionId: selected.id,
     selectedLessonKey: selected.lessonKey,
     reason,
-    candidateSnapshot: candidates
+    candidateSnapshot: candidates,
   };
 }
 
 module.exports = {
-  resolveLessonSelection
+  resolveLessonSelection,
 };
